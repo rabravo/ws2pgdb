@@ -869,7 +869,6 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     }
 
     RPostgres::dbDisconnect(conn)
-    #RPostgres::dbUnloadDriver(drv)
     return(tableName)
     
   }else{
@@ -912,14 +911,19 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	  
       weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
       #Verify that available information exist
-      if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+      if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
         if ( config$isgraphic ){
-          gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+          gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, ".\t\t\t\t\t", sep="" )
         }else{
-          msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+          msg <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, ".", sep="" )
           cat( msg )
         }
-        return('1')
+
+        colnames( valores ) <- station$id[1:(i-1)]
+        RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+        RPostgres::dbDisconnect( conn )
+        return(tableName) 
+
       } 
 
       weatherYear<- weatherVar$data
@@ -945,14 +949,17 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	         weatherVar<-rnoaa::ncdc(datasetid = ghcnd, stationid = estacion, datatypeid=type, startdate = ssDate, enddate= ffDate , limit=366, token=config$token)
 
 	        #Verify that available information exist
-                if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+      		if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
                   if ( config$isgraphic ){
-                    gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, ".\t\t\t\t\t", sep="" )
                   }else{
-                    msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    msg <- base::paste("Not Data Available for statino ", estacion, " for variable type:  ", type, ".\t\n", sep="" )
                     cat( msg )
                   }
-                  return('1')
+        	  colnames( valores ) <- station$id[1:(i-1)]
+	          RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+	          RPostgres::dbDisconnect( conn )
+	          return(tableName) 
                 }
 
 	        #Delay needed since NOAA service accepts a maximum of 5 request per second.
@@ -969,14 +976,19 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	        weatherVar<-rnoaa::ncdc(datasetid = ghcnd, stationid = estacion, datatypeid=type, startdate = ssDate, enddate= ffDate , limit=366, token=config$token)
 
 	        #Verify that available information exist
-                if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+      		if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
                   if ( config$isgraphic ){
-                    gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, ".\t\t\t\t\t", sep="" )
                   }else{
-                    msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    msg <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, ".\t\n", sep="" )
                     cat( msg )
                   }
-                  return('1')
+
+        	  colnames( valores ) <- station$id[1:(i-1)]
+	          RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+	          RPostgres::dbDisconnect( conn )
+	          return(tableName) 
+
                 }
 
 	        weatherYear    <- rbind( weatherYear, weatherVar$data)      
@@ -999,17 +1011,12 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 	
 	    if ( i == 1)
-	    {	    
-	      #cat("In IF section\n")
-   	      #print(estacion)
-	      intervalAsDate     <- as.character( base::as.Date( weatherYear$date ) ) 
-	      print(i)
-              print( intervalAsDate[1] )
+	    {
+	    
+	      intervalAsDate     <-  base::as.Date( weatherYear$date ) 
               # TMAX = Maximum temperature (tenths of degrees C)
 	      intervalAsValue    <- sprintf("%.4f", weatherYear$value/10)
-		print("Debug1")   
 	      stationDataHash    <- hash::hash( intervalAsDate , intervalAsValue )               
-		print("Debug2")   
 	      allDatesHash       <- hash::hash( dates ,  rep(1, ndays ) )         # h1 <- hash( dates , rep(1, ndays ) )   
 	      hash::values( allDatesHash, keys=intervalAsDate ) <- intervalAsValue
 	      v1.df              <- as.data.frame( hash::has.key( dates , stationDataHash ) )
@@ -1044,10 +1051,7 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	    
 	      #cat("In ELSE section\n")
 	      #print(estacion)
-	      intervalAsDate     <- as.character( base::as.Date( weatherYear$date ) ) 
-
-	      print(i)
-              print( intervalAsDate[1] )
+	      intervalAsDate     <-  base::as.Date( weatherYear$date ) 
 
 	      # TMAX = Maximum temperature (tenths of degrees C)
 	      intervalAsValue    <- sprintf( "%.4f", weatherYear$value/10 ) 
@@ -1081,7 +1085,6 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	  }#endFOR   (stick time series of different stations together)	
 	  
 	  colnames( valores ) <- station$id
-#      print( head( valores) )
 #      print( tail( valores) )
       
       if (config$isgraphic){	
@@ -1100,10 +1103,8 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
       }else{cat("Check Postgres table!")}
 	  
   }#endIF/ELSE
-
    
   RPostgres::dbDisconnect( conn )
-  RPostgres::dbUnloadDriver( drv )
   return(tableName) 
 
 }#end FUNCTION_dateIntervals
@@ -1180,7 +1181,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     gp   <- gWidgets::ggroup(container=w, expand=TRUE)
     txt  <- gWidgets::glabel("Creating Postgres weather information table \t\t\t\t", expand=TRUE, container=gp)
 
-  }else{ cat("Creating Postgres weather information table \t\t\t\t")}
+  }else{ cat("Creating Postgres weather information table \t\t\t\t\n")}
   
   if(RPostgres::dbExistsTable(conn, tableName)){
 
@@ -1200,7 +1201,6 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     }
 
     RPostgres::dbDisconnect(conn)
-    #RPostgres::dbUnloadDriver(drv)
     return(tableName)
     
   } else {
@@ -1209,7 +1209,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
           res <- RPostgres::dbSendQuery(conn, q1)
           station <- data.frame(RPostgres::dbFetch(res))
           RPostgres::dbClearResult(res)
-          #print(station)
+
 	  minDate <- base::as.Date( lubridate::ymd( station$mindate[1] ) )
 	  maxDate <- base::as.Date( lubridate::ymd( station$maxdate[1] ) )
 	  
@@ -1224,38 +1224,44 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	  for(i in 1:nrow( station ) ){  
 	
 	    estacion	 <- station$id[i]
-	    #print(estacion)
 	    #startDate
 	    sDate	 <- minDate
 	    #finishDate                 
 	    fDate	 <- minDate
 	    
-	    #Used for testing Comment this out after testing ( maybe deprecated)        
-	    #year( sDate )	<- year( maxDate ) - 5   
-	    #year( fDate )	<- year( maxDate ) - 5
-	    
 	    lubridate::year( fDate ) <- lubridate::year( fDate ) + 1    #Interval (sDate, fDate) is one year.
 
-		#Temporal strings attached to the dates for consistency with NOAA 	    
+	    #Temporal strings attached to the dates for consistency with NOAA 	    
 	    ssDate <- base::paste(sDate, "T00:00:00", sep="")
 	    ffDate <- base::paste(fDate, "T00:00:00", sep="")
 	  
 	    weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
-
-	    #Verify that available information exist 
-            if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+	    #Verify that available information exist
+            if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
               if ( config$isgraphic ){
-                gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
               }else{
-                msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                msg <- base::paste("Not Data Available for station ", estacion ," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
                 cat( msg )
+                print("Spotted a Null\n")
               }
-              return('1')
+	      colnames( valores ) <- station$id[1:(i-1)]
+              RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+              RPostgres::dbDisconnect( conn )
+              return(tableName) 
             }
 
+	    weatherYear<- weatherVar$data  
+ 
+            #if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
+            #  print("Spotted a Null\n")
+	    #  colnames( valores ) <- station$id
+            #  RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+            #  RPostgres::dbDisconnect( conn )
+            #  return(tableName) 
+            #}
 
-	    weatherYear<- weatherVar$data    
-	
+    
 	    repeat
 	    {              
 
@@ -1270,21 +1276,26 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 	      ssDate         <- base::paste(sDate, "T00:00:00", sep="")
 	      ffDate         <- base::paste(fDate, "T00:00:00", sep="")
-	           
+
+
 	      if( isTRUE( lubridate::year( fDate ) < lubridate::year( maxDate ) ) )
 	      { 
 	 
 	        weatherVar<-rnoaa::ncdc(datasetid = ghcnd, stationid = estacion, datatypeid=type, startdate = ssDate, enddate= ffDate , limit=366, token=config$token)
 
 		#Verify that available information exist 
-                if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+                if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
                   if ( config$isgraphic ){
-                    gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
                   }else{
-                    msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    msg <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, " exists.\t\n", sep="" )
                     cat( msg )
                   }
-                  return('1')
+                
+	          colnames( valores ) <- station$id[1:(i-1)]
+                  RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+                  RPostgres::dbDisconnect( conn )
+                  return(tableName) 
                 }
 
 		#Delay needed since NOAA service accepts a maximum of 5 request per second.
@@ -1304,14 +1315,17 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 
 		#Verify that available information exist 
-                if( length( which( weatherVar$data$id == FALSE) ) > 0  ){
+                if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
                   if ( config$isgraphic ){
-                    gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
                   }else{
-                    msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                    msg <- base::paste("Not Data Available for station ", estacion, " for variable type:  ", type, " exists.\t\n", sep="" )
                     cat( msg )
                   }
-                  return('1')
+	          colnames( valores ) <- station$id[1:(i-1)]
+                  RPostgres::dbWriteTable( conn, tableName, as.data.frame( valores ) )
+                  RPostgres::dbDisconnect( conn )
+                  return(tableName) 
                 }
 
 	        weatherYear    <- rbind( weatherYear, weatherVar$data)      
@@ -1323,9 +1337,6 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	    # TMAX = Maximum temperature (tenths of degrees C)	    
 	    promedio <- sprintf( "%.4f", mean( weatherYear$value/10 ) )     
 	    
-	    # Return year mean value  
-	    #print( promedio )                                               
-
 	    #NOAA specification of available data within a range often is not complete. 
 	    #Individual dates are missing even within an specified range.
 	    #SOLUTIONS:  
@@ -1337,7 +1348,8 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	    {	    
 	      #cat("In IF section\n")
    	      #print(estacion)
-	      intervalAsDate     <- as.character( base::as.Date( weatherYear$date ) )
+              print( tail( weatherYear$date ) )
+	      intervalAsDate     <- base::as.Date( weatherYear$date )
 
               # TMAX = Maximum temperature (tenths of degrees C)
 	      intervalAsValue    <- sprintf("%.4f", weatherYear$value/10)   
@@ -1371,9 +1383,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	    else
 	    {
 	    
-	      #cat("In ELSE section\n")
-	      #print(estacion)
-	      intervalAsDate     <- as.character( base::as.Date( weatherYear$date ) )
+	      intervalAsDate     <-  base::as.Date( weatherYear$date )
 
 	      # TMAX = Maximum temperature (tenths of degrees C)
 	      intervalAsValue    <- sprintf( "%.4f", weatherYear$value/10 ) 
@@ -1405,8 +1415,6 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	  }#endFOR   (stick time series of different stations together)	
 	  
 	  colnames( valores ) <- station$id
-#      print( head( valores) )
-#      print( tail( valores) )
       
       if (config$isgraphic){	
         w2   <- gWidgets::gwindow("Message: ", width=500)
@@ -1427,7 +1435,6 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 
   RPostgres::dbDisconnect( conn )
-  RPostgres::dbUnloadDriver( drv )
   return(tableName) 
 
 }#end FUNCTION_dateIntervals
@@ -1532,96 +1539,22 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
 
     name_and_date.df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
 
-    #Sorted Indexes
-    order.maxdate   <- order(name_and_date.df$maxdate, decreasing = TRUE)   	
 
-    #Get the intervals sort in decreasing order      
-    stationSortByMaxDate <- name_and_date.df[order.maxdate,]                 	
-
-    #Filter station with datacoverage > 90%
-    #subIntervalDataCover      <- subset( stationSortByMaxDate, datacoverage >= 0.90 )
-
-    #Filter station with maxdate year in 2015
-    subIntervalYear <- subset( stationSortByMaxDate, lubridate::year( lubridate::ymd( maxdate) ) == lubridate::year( lubridate::ymd( lubridate::today() ) ) )
+    #Keep stations with maxdate year today's year and stations with mindate less or equal to (today's year minus span)
+    subIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::ymd(lubridate::today()))) & (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::ymd(lubridate::today())) - span))) 
 
     #Update date to beginning of current year  
     subIntervalYear$maxdate <- base::as.Date( lubridate::floor_date( lubridate::ymd( lubridate::today() ) , "year") )  	
 
-    #Sorted Indexes
-    order.mindate   <- order( subIntervalYear$mindate, decreasing = TRUE)    
-
-    #Get the intervals sort in decreasing order
-    stationSortByMinDate <- subIntervalYear[order.mindate,]                  	
-
-  
-    #Guarantees an intersection of data of all weather stations from current year back to
-    #a threshold of years. (i.e. current year 2015, and threshold equal 10 or 2005)
+    #a threshold of years. (i.e. current year 2015, and threshold equal to the span value i.e. span <- 3 or 2012)
     threshold   <- base::as.integer(span)
 
-    #When the number of available stations is LESS than numStations, code chooses all stations; 
-    #otherwise, it uses the REPEAT iteration to gather at least five stations. 
-    numStations <- 5
+    #mindate (span) set by user         
+    startDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( span ) )
+
+    #Update dates to startDate value to all elements in the array
+    subIntervalMinSizeOfAYear$mindate <- base::as.Date(startDate)
   
-   
-    if(  !( isTRUE( nrow( stationSortByMinDate ) < numStations ) )  ){
-
-      #Theshold guarantees latest information    
-      thrs <- lubridate::year( base::as.Date( lubridate::floor_date( lubridate::today() , "year") ) ) - threshold
-    
-      subIntervalMinSizeOfAYear <- subset(stationSortByMinDate,  lubridate::year( lubridate::ymd( mindate ) ) <= thrs ) 
-    
-      #Heursitics: when number of weather stations is small, this section will intend to increase the 
-      #number of weather stations while reducing the threshold value.
-    
-      repeat{
-    
-        #The number of minimum weather stations     
-        if( !( isTRUE( nrow(subIntervalMinSizeOfAYear) >= numStations - 1 ) ) ){        
-          thrs <- thrs - 1
-          subIntervalMinSizeOfAYear <- subset(stationSortByMinDate,  lubridate::year( lubridate::ymd( mindate ) ) <= thrs ) 
-        }else{break}#endIF/ELSE
-      
-      }#endREPEAT
-    
-      #Extract the sorted element with the earliest start time  
-      startDate <- subIntervalMinSizeOfAYear$mindate[1]                     
-
-
-      #mindate (span) set by user         
-      initDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( base::as.integer(span) ) )
-
-      #Guarantees the retrieval of the data to be defined by the user's span value
-      if(initDate >= startDate){
-        #Update dates to startDate value to all elements in the array
-        subIntervalMinSizeOfAYear$mindate <- base::as.Date(initDate)
-      }else{
-        #Update dates to startDate value to all elements in the array
-        subIntervalMinSizeOfAYear$mindate <- base::as.Date(startDate)
-      }
-
-
-    }else{ 
-
-         order.min <- order( stationSortByMinDate$mindate, decreasing = TRUE)
-         subIntervalMinSizeOfAYear <- stationSortByMinDate[order.min,]
-
-         #Extract the sorted element with the earliest start time  
-         startDate <- subIntervalMinSizeOfAYear$mindate[1]                     
-
-         #mindate (span) set by user         
-         initDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( base::as.integer(span) ) )
-    	#Guarantees the retrieval of the data to be defined by the user's span value
-    	if(initDate >= startDate){
-     	  #Update dates to startDate value to all elements in the array
-      	  subIntervalMinSizeOfAYear$mindate <- base::as.Date(initDate)
-	}else{
-	  #Update dates to startDate value to all elements in the array
-      	  subIntervalMinSizeOfAYear$mindate <- base::as.Date(startDate)
-        }
-
-
-    }
-
     #Simplistic naming return this data structure
     station.df <- subIntervalMinSizeOfAYear                                  
     
@@ -1648,7 +1581,6 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
     OGRstring   <- base::paste("PG:dbname=", config$dbname, " user=", config$dbuser," password=", config$dbpwd, " host=", config$dbhost," port=", config$dbport, sep = "")
        
     coord_error <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", overwrite_layer=TRUE, tableName, driver=driver, verbose='TRUE')  
-     
    
     if(config$isgraphic){
       gWidgets::gmessage("Finished. Check Postgres table!\n")
@@ -1659,7 +1591,6 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
   }#endIF/ELSE
   
   RPostgres::dbDisconnect(conn)
-  #RPostgres::dbUnloadDriver(drv)      
 
   return(tableName)
 }#endFUNCTION
