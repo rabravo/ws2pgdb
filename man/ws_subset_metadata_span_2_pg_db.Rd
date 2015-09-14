@@ -39,7 +39,7 @@ ghcnd <- 'GHCND'
 geoid <- '12087'
 type  <- 'TMAX'
 stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span <- 2
+span <-'3'
 ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
 }
 

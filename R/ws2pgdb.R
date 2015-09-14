@@ -1468,7 +1468,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <- 2
+#' span <-'3'
 #' ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' @note Remember that all_coor_ws() returns a set of stations.
 #' @export
@@ -1541,7 +1541,7 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
     
 
     #Keep stations with maxdate year today's year and stations with mindate less or equal to (today's year minus span)
-    subIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::ymd(lubridate::today()))) & (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::ymd(lubridate::today())) - span))) 
+    subIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::today())) & (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::today()) - base::as.integer(span)))) 
 
     #Update date to beginning of current year  
     subIntervalYear$maxdate <- base::as.Date( lubridate::floor_date( lubridate::ymd( lubridate::today() ) , "year") )  	
@@ -1550,7 +1550,7 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
     threshold   <- base::as.integer(span)
 
     #mindate (span) set by user         
-    startDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( span ) )
+    startDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( base::as.integer(span) ) )
 
     #Update dates to startDate value to all elements in the array
     subIntervalYear$mindate <- base::as.Date(startDate)
