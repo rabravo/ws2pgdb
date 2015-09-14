@@ -1537,8 +1537,8 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
 
   } else {
 
-    name_and_date.df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
-
+   df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
+    
 
     #Keep stations with maxdate year today's year and stations with mindate less or equal to (today's year minus span)
     subIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::ymd(lubridate::today()))) & (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::ymd(lubridate::today())) - span))) 
@@ -1553,10 +1553,10 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
     startDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( span ) )
 
     #Update dates to startDate value to all elements in the array
-    subIntervalMinSizeOfAYear$mindate <- base::as.Date(startDate)
+    subIntervalYear$mindate <- base::as.Date(startDate)
   
     #Simplistic naming return this data structure
-    station.df <- subIntervalMinSizeOfAYear                                  
+    station.df <- subIntervalYear                                  
     
     msg <- base::paste("Creating ", tableName, " table of ", type, "\n",sep="")    
     if ( config$isgraphic ){
