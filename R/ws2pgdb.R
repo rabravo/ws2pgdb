@@ -1675,11 +1675,22 @@ stretch_delay_latent_period <- function(geoid, disease, type){
 
 #' dengue_model() habia una vez ...
 #'
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
-#' dengue_model()
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' dengue_model(tableData, conn)
 #' @export
 dengue_model <- function(tableData, conn){
 
@@ -1693,10 +1704,21 @@ dengue_model <- function(tableData, conn){
 
 #' malaria_model() habia una vez ...
 #'
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' malaria_model(tableData, conn)
 #' @export
 malaria_model <- function(tableData,conn){
@@ -1710,10 +1732,21 @@ malaria_model <- function(tableData,conn){
 
 #' west_nile_model() habia una vez ...
 #'
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' west_nile_model(tableData, conn)
 #' @export
 west_nile_model <- function(tableData,conn){
@@ -1725,12 +1758,23 @@ west_nile_model <- function(tableData,conn){
   print("Hello west_nile")
 }
 
-#' chikungunya_model
+#' chikungunya_model() habia una vez ...
 #'
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' chikungunya_model(tableData, conn)
 #' @export
 chikungunya_model <- function(tableData, conn){
@@ -1744,11 +1788,23 @@ chikungunya_model <- function(tableData, conn){
 
 #' changas_model() habia una vez ...
 #'
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' changas_model(tableData, conn)
+#' RPostgres::dbDisconnect(conn)
 #' @export
 changas_model <- function(tableData, conn){
   q1    <- base::paste("select * from ", tableData, sep="")
@@ -1759,11 +1815,22 @@ changas_model <- function(tableData, conn){
   print("Hello changas")
 }
 
-#' la_crosse_virus_model() habia una vez
-#' @param tablaData is the name of the table containing weather data ( temperature )
+#' la_crosse_virus_model() habia una vez ...
+#' @param tableData is the name of the table containing weather data ( temperature )
 #' @param conn is an open connectino to read/write to a pgdb
 #' @return returns the tail of the data that has been found. 
 #' @examples
+#' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' config <- yaml::yaml.load_file( file )
+#' driver <- "PostgreSQL"
+#' drv    <- RPostgres::Postgres()
+#' conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+#' ghcnd <- 'GHCND'
+#' geoid <- '12087'
+#' type  <- 'TMAX'
+#' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+#' span <-'3'
+#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
 #' la_crosse_virus_model(tableData, conn)
 #' @export
 la_crosse_virus_model <- function(tableData, conn){

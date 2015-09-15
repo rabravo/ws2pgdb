@@ -2,14 +2,33 @@
 % Please edit documentation in R/ws2pgdb.R
 \name{dengue_model}
 \alias{dengue_model}
-\title{dengue_model() bla bla}
+\title{dengue_model() habia una vez ...}
 \usage{
-dengue_model()
+dengue_model(tableData, conn)
+}
+\arguments{
+\item{tableData}{is the name of the table containing weather data ( temperature )}
+
+\item{conn}{is an open connectino to read/write to a pgdb}
+}
+\value{
+returns the tail of the data that has been found.
 }
 \description{
-dengue_model() bla bla
+dengue_model() habia una vez ...
 }
 \examples{
-dengue_model()
+file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+config <- yaml::yaml.load_file( file )
+driver <- "PostgreSQL"
+drv    <- RPostgres::Postgres()
+conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+ghcnd <- 'GHCND'
+geoid <- '12087'
+type  <- 'TMAX'
+stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
+span <-'3'
+tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
+dengue_model(tableData, conn)
 }
 
