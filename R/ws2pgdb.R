@@ -1346,9 +1346,6 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	
 	    if ( i == 1)
 	    {	    
-	      #cat("In IF section\n")
-   	      #print(estacion)
-              print( tail( weatherYear$date ) )
 	      intervalAsDate     <- base::as.Date( weatherYear$date )
 
               # TMAX = Maximum temperature (tenths of degrees C)
@@ -1635,7 +1632,7 @@ stretch_delay_latent_period <- function(geoid, disease, type){
     res   <- RPostgres::dbSendQuery(conn, q1)
     state <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_", geoid,"_ws_subset_data_avg_",type, sep="")
+    tableName <- base::paste(state, "_", geoid,"_ws_subset_data_avg_", sep="")
 
   }else{
 
@@ -1649,7 +1646,7 @@ stretch_delay_latent_period <- function(geoid, disease, type){
     state <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
     
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_avg_",type, sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_avg_", sep="")
 
   }
 
@@ -1659,9 +1656,12 @@ stretch_delay_latent_period <- function(geoid, disease, type){
   tableName <- gsub(" ", "_", tableName)
 
   switch(disease,
-       dengue    = dengue_model(),
-       malaria   = malaria_model(),
-       west_nile = west_nile_model()
+       dengue          = model <- dengue_model(tableName,conn),
+       malaria         = model <- malaria_model(tableName,conn),
+       west_nile       = model <- west_nile_model(tableName,conn),
+       chikungunya     = model <- chikungunya_model(tableName,conn),
+       changas         = model <- changas_model(tableName,conn),
+       la_crosse_virus = model <- la_crosse_virus_model(tableName,conn)
   )
 
   #q1    <- base::paste("select * from ",tableName, sep="")
@@ -1673,34 +1673,104 @@ stretch_delay_latent_period <- function(geoid, disease, type){
 }
 
 
-#' dengue_model() bla bla
+#' dengue_model() habia una vez ...
 #'
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
 #' @examples
 #' dengue_model()
 #' @export
-dengue_model <- function(){
+dengue_model <- function(tableData, conn){
+
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
   print("Hello dengue")
 }
 
-
-
-#' malaria_model() bla bla
+#' malaria_model() habia una vez ...
 #'
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
 #' @examples
-#' malaria_model()
+#' malaria_model(tableData, conn)
 #' @export
-malaria_model <- function(){
-  print("Hello mal aria")
+malaria_model <- function(tableData,conn){
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
+  print("Hello malaria")
 }
 
-
-
-#' west_nile_model() bla bla
+#' west_nile_model() habia una vez ...
 #'
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
 #' @examples
-#' west_nile_model()
+#' west_nile_model(tableData, conn)
 #' @export
-west_nile_model <- function(){
+west_nile_model <- function(tableData,conn){
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
   print("Hello west_nile")
 }
 
+#' chikungunya_model
+#'
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
+#' @examples
+#' chikungunya_model(tableData, conn)
+#' @export
+chikungunya_model <- function(tableData, conn){
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
+  print("Hello chikungynua")
+}
+
+#' changas_model() habia una vez ...
+#'
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
+#' @examples
+#' changas_model(tableData, conn)
+#' @export
+changas_model <- function(tableData, conn){
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
+  print("Hello changas")
+}
+
+#' la_crosse_virus_model() habia una vez
+#' @param tablaData is the name of the table containing weather data ( temperature )
+#' @param conn is an open connectino to read/write to a pgdb
+#' @return returns the tail of the data that has been found. 
+#' @examples
+#' la_crosse_virus_model(tableData, conn)
+#' @export
+la_crosse_virus_model <- function(tableData, conn){
+  q1    <- base::paste("select * from ", tableData, sep="")
+  res   <- RPostgres::dbSendQuery(conn, q1)
+  ws_data <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  print(tail(ws_data))
+  print("Hello la_crosse_virus")
+}
