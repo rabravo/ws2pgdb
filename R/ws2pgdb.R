@@ -59,9 +59,11 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
 
   }
 
-  stations <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
+  ws <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
 
-  if( length( which( stations$data$id == FALSE) ) > 0  ){
+  stations <- ws$data
+  stations$id <- gsub("GHCND:", "", stations$id)
+  if( length( which( stations$id == FALSE) ) > 0  ){
     if ( config$isgraphic ){
       gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
     }else{
@@ -74,9 +76,9 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
   if( config$isgraphic ){
 
     switch(type,
-         PRCP = stations$data <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
-         TMAX = stations$data <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
-         TMIN = stations$data <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928")
+         PRCP = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
+         TMAX = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
+         TMIN = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928")
     )
 
   }
@@ -139,17 +141,16 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
 
     print( base::paste("Creating ", tableName, " table of ", type , sep="") )
     Sys.sleep(3)
-    coord             <- as.data.frame( stations$data[,c("longitude","latitude")] )
+    coord             <- as.data.frame( stations[,c("longitude","latitude")] )
     proj              <- "+init=epsg:4269"
     sp                <- sp::SpatialPoints(coord)
     spdf              <- sp::SpatialPointsDataFrame(sp, coord)
     sp::proj4string(spdf) <- proj #CRS(proj)
 
     #Insert attributes into the SpatialPointsDataFrame 
-    spdf$name	      <- stations$data$id
-    spdf$mindate      <- stations$data$mindate
-    spdf$maxdate      <- stations$data$maxdate
-
+    spdf$mindate      <- stations$mindate
+    spdf$maxdate      <- stations$maxdate
+    spdf$name	      <- stations$id
     
     OGRstring         <- base::paste("PG:dbname=", config$dbname, " user=", config$dbuser," password=", config$dbpwd, " host=", config$dbhost," port=", config$dbport, sep = "")
     coord_error       <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer='TRUE', verbose='TRUE')
@@ -199,28 +200,37 @@ all_coor_ws <- function( ghcnd, geoid, type){
     txt <- gWidgets::glabel("Downloading data \t\t\t\t", expand=TRUE, container=gp)
 
   }
-  
 
   #Extract stations    
-  stations <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
+  ws <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
 
-  if( length( which( stations$data$id == FALSE) ) > 0  ){
+  stations <- ws$data
+
+  if( length( which( stations$id == FALSE) ) > 0  ){
     if ( config$isgraphic ){
+
       gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+
     }else{
+
       msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
       cat( msg )
+
     }
+
     return('1')
   }
 
-
   switch(type,
-         PRCP = stations <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
-         TMAX = stations <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
-         TMIN = stations <- subset(stations$data, id != "GHCND:USW00013907" & id != "GHCND:USW00093928")
+         PRCP = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
+         TMAX = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928"),
+         TMIN = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928")
   )
+
   
+  print(stations$id)
+  stations$id <- gsub("GHCND:", "", stations$id)
+ 
   return(stations)
 
 }#endFUNCTION
@@ -891,7 +901,7 @@ ws_data_na_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	
     for(i in 1:nrow( station ) ){  
 	
-      estacion	 <- station$id[i]
+      ws	 <- station$id[i]
       #print(estacion)
       #startDate
       sDate	 <- minDate
@@ -907,6 +917,7 @@ ws_data_na_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
       #Temporal strings attached to the dates for consistency with NOAA 	    
       ssDate <- base::paste(sDate, "T00:00:00", sep="")
       ffDate <- base::paste(fDate, "T00:00:00", sep="")
+      estacion <-base::paste("GHCND:", ws, sep="")
 	  
       weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
       #Verify that available information exist
@@ -1222,7 +1233,7 @@ ws_data_avg_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	
 	  for(i in 1:nrow( station ) ){  
 	
-	    estacion	 <- station$id[i]
+	    ws	 <- station$id[i]
 	    #startDate
 	    sDate	 <- minDate
 	    #finishDate                 
@@ -1233,7 +1244,8 @@ ws_data_avg_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	    #Temporal strings attached to the dates for consistency with NOAA 	    
 	    ssDate <- base::paste(sDate, "T00:00:00", sep="")
 	    ffDate <- base::paste(fDate, "T00:00:00", sep="")
-	  
+	    estacion       <- base::paste("GHCND:", ws, sep="")
+
 	    weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
 	    #Verify that available information exist
             if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
@@ -1708,7 +1720,7 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	
 	  for(i in 1:nrow( station ) ){  
 	
-	    estacion	 <- station$id[i]
+	    ws	 <- station$id[i]
 	    #startDate
 	    sDate	 <- minDate
 	    #finishDate                 
@@ -1722,6 +1734,8 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	    #Temporal strings attached to the dates for consistency with NOAA 	    
 	    ssDate <- base::paste(sDate, "T00:00:00", sep="")
 	    ffDate <- base::paste(fDate, "T00:00:00", sep="")
+            estacion       <- base::paste("GHCND:", ws, sep="")
+
 
 	    weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
 	    #Verify that available information exist
@@ -2048,7 +2062,7 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	
     for(i in 1:nrow( station ) ){  
 	
-      estacion	 <- station$id[i]
+      ws	 <- station$id[i]
       #print(estacion)
       #startDate
       sDate	 <- minDate
@@ -2064,6 +2078,7 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
       #Temporal strings attached to the dates for consistency with NOAA 	    
       ssDate <- base::paste(sDate, "T00:00:00", sep="")
       ffDate <- base::paste(fDate, "T00:00:00", sep="")
+      estacion <- base::paste("GHCND:", ws, sep="")
 	  
       weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
       #Verify that available information exist
