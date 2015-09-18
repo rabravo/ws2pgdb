@@ -4,30 +4,33 @@
 \alias{stretch_delay_latent_period}
 \title{stretch_delay_latent_period() process weather information to produce stretch-delay of latent period}
 \usage{
-stretch_delay_latent_period(geoid, disease, type)
+stretch_delay_latent_period(geoid, type, span, disease)
 }
 \arguments{
 \item{geoid}{FIPS number from census tables (tiger files) to determine a region}
 
-\item{disease}{String with the name of the vector-borne disease}
-
 \item{type}{Weather variable under investigation}
+
+\item{span}{keyword to find the table with the desired data}
+
+\item{disease}{String with the name of the vector-borne disease}
 }
 \value{
-Returns Hellow World right now
+Returns the name of the table containing the completion of the latent period
 }
 \description{
 This function uses the provided data frame with temperature time series to determine the
-completion of latent period for a given vector-borne disease with in a region
+completion of latent period for a given vector-borne disease with in a region. It creates
+a table at the Postgres database.
 }
 \note{
 In progres ....
 }
 \examples{
-ghcnd   <- 'GHCND'
-geoid   <- '48489'
+geoid   <- '48121'
 type    <- 'TMAX'
+span    <- '10'
 disease <- 'dengue'
-stretch_delay_latent_period( geoid, disease, type)
+stretch_delay_latent_period( geoid, type, span, disease)
 }
 

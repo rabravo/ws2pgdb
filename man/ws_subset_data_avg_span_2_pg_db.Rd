@@ -28,7 +28,7 @@ The example shows the use of ws_subset_metadata_span_2_pg_db(), but it can be ve
 }
 \examples{
 ghcnd <- 'GHCND'
-geoid <- '48001'
+geoid <- '12087'
 type  <- 'TMAX'
 stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
 span  <- 2

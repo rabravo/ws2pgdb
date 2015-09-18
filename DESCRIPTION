@@ -14,9 +14,10 @@ Imports:
 	hash,
 	lubridate,
 	MASS,
+	RcppOctave,
 	rgdal,
 	rnoaa,
-	RPostgres,	
+	RPostgres,
 	sp,
         yaml
 Suggests:

@@ -31,12 +31,12 @@ what to do with missing points ( i.e. extrapolate). The example shows the use of
 }
 \examples{
 ghcnd <- 'GHCND'
-geoid <- '48001'
+geoid <- '12087'
 type  <- 'TMAX'
 stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span <- 2
+span <- '10'
 ws_subset_metadata  <-  ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
-ws_subset_data_na_span_2_pg_db("GHCND", "48001", "TMAX", span, ws_subset_metadata)
+ws_subset_data_na_span_2_pg_db(ghcnd, geoid, type, span, ws_subset_metadata)
 }
 \keyword{NOAA,}
 \keyword{RPostgreSQL,}

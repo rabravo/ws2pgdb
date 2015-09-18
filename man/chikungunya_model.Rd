@@ -4,12 +4,16 @@
 \alias{chikungunya_model}
 \title{chikungunya_model() habia una vez ...}
 \usage{
-chikungunya_model(tableData, conn)
+chikungunya_model(tableData, disease, conn, degree)
 }
 \arguments{
 \item{tableData}{is the name of the table containing weather data ( temperature )}
 
+\item{disease}{is the name of the vector-borne disease (i.e dengue, malaria, chikungunya, etc)}
+
 \item{conn}{is an open connectino to read/write to a pgdb}
+
+\item{degree}{is the order at one wants to adjusts the polynomio (for dengue degree=5) has the lowest norm}
 }
 \value{
 returns the tail of the data that has been found.
@@ -26,9 +30,17 @@ conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, db
 ghcnd <- 'GHCND'
 geoid <- '12087'
 type  <- 'TMAX'
+disease <- 'chikungunya'
+degree  <- '5'
 stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span <-'3'
+span <-'10'
 tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
-chikungunya_model(tableData, conn)
+tableDisease <- base::paste(tableData,"_chikungunya",sep="")
+q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
+res   <- RPostgres::dbSendQuery(conn, q)
+exists <- RPostgres::dbFetch(res)
+RPostgres::dbClearResult(res)
+if( as.integer( exists) ){ print("Exists!") }else{ chikungunya_model(tableData, disease, conn, degree) }
+RPostgres::dbDisconnect(conn)
 }
 

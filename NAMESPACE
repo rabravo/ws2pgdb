@@ -3,7 +3,7 @@
 export(all_coor_ws)
 export(all_coor_ws_2_pg_db)
 export(canopiVoronoi)
-export(changas_model)
+export(chagas_model)
 export(chikungunya_model)
 export(createVoronoi)
 export(dengue_model)
