@@ -1977,7 +1977,7 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
     res    <- RPostgres::dbSendQuery(conn, q1)
     state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",geoid,"_ws_data_na_span_",span,"_", sep="")
+    tableName <- base::paste(state, "_",geoid,"_ws_data_span_",span,"_na_", sep="")
 
   }else{
 
@@ -1989,7 +1989,7 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
     res    <- RPostgres::dbSendQuery(conn, q3)
     state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_na_span_",span,"_",sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_span_",span,"_na_",sep="")
 
   }
 
@@ -2428,18 +2428,18 @@ dengue_model <- function(tableData, disease, conn, degree){
 	      min_temp_eip = min(temp_eip);\
 	      max_temp_eip = max(temp_eip);\
 	      eip_coeff_la = polyfit( temp_eip, eip_y1, num);\
-	      r_eip = vectorize(inline(char(polyout(eip_coeff_la, 'T'))));\
+	      dengue_m = vectorize(inline(char(polyout(eip_coeff_la, 'T'))));\
 \
 	      for j=1:columns(real_temp)\
 		for k=1:rows(real_temp)\
 		  if (real_temp(k,j) >= 32)\
 		    eip(k,j) = 7;\
-		  elseif( real_temp(k,j) <= 24 && real_temp(k,j) >= 0)\
+		  elseif( real_temp(k,j) <= 24 && real_temp(k,j) > 0)\
 		    eip(k,j) = 25;\
 		  elseif(real_temp(k,j) <= 0)\
 		    eip(k,j) = 0;\
 		  else\
-		    eip(k,j) = r_eip( real_temp(k,j) );\
+		    eip(k,j) = dengue_m( real_temp(k,j) );\
 		  endif\
 	        endfor\
 	     endfor\ 
@@ -2448,6 +2448,7 @@ dengue_model <- function(tableData, disease, conn, degree){
   }
   tableName <- paste(tableData,"_",disease, sep="")
   RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$eip ) )
+  o_clear(all=TRUE)
   return(tableName)
 }
 
@@ -2491,34 +2492,23 @@ malaria_model <- function(tableData, disease, conn, degree){
   RPostgres::dbClearResult(res)
   .O$real_temp <- ws_data_temp
   if(1){
-    .O$num <- degree
+    #.O$num <- degree
     RcppOctave::o_source(text="\
-	      eip_y1 = [25 18 13 12 7 7];\
-	      rec_eip_y1 = 1./eip_y1;\
-	      temp_eip = [24 26 27 30 32 35];\
-	      min_temp_eip = min(temp_eip);\
-	      max_temp_eip = max(temp_eip);\
-	      eip_coeff_la = polyfit( temp_eip, eip_y1, num);\
-	      r_eip = vectorize(inline(char(polyout(eip_coeff_la, 'T'))));\
-\
-	      for j=1:columns(real_temp)\
-		for k=1:rows(real_temp)\
-		  if (real_temp(k,j) >= 32)\
-		    eip(k,j) = 7;\
-		  elseif( real_temp(k,j) <= 24 && real_temp(k,j) >= 0)\
-		    eip(k,j) = 25;\
-		  elseif(real_temp(k,j) <= 0)\
-		    eip(k,j) = 0;\
-		  else\
-		    eip(k,j) = r_eip( real_temp(k,j) );\
-		  endif\
-	        endfor\
-	     endfor\ 
-	   ")
-
+	      malaria_m = vectorize(inline(char('0.71 * (T - 21 ) + 4.7')));\
+              for j=1:columns(real_temp)\
+                for k=1:rows(real_temp)\
+                  if (real_temp(k,j) > 20 && real_temp(k,j) <= 31)\
+                    eip(k,j) = malaria_m( real_temp(k,j) );\
+                  else\
+                    eip(k,j) = 0;\
+                  endif\
+                endfor\
+             endfor\
+	    ")
   }
   tableName <- paste(tableData,"_",disease, sep="")
-  RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$eip ) )
+  RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$malaria_eip ) )
+  o_clear(all=TRUE)
   return(tableName)
 }
 
