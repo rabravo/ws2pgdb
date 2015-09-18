@@ -1042,7 +1042,7 @@ ws_data_na_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	                 
 	        valores <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )
 
-	      }else{ valores  <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores  <- data.frame( intervalAsValue )  }#endIF/ELSE
 	      
 	    }
 	    else
@@ -1073,9 +1073,9 @@ ws_data_na_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	        vecPromedio      <- rep( NA, sizeSubV1  )
 	        hash::values( allDatesHash, keys=dateKeys) <- vecPromedio
 	        subValores       <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )            
-	        valores          <- data.frame( cbind( valores, subValores ) )	        
+	        valores          <- as.data.frame( cbind( valores, subValores ) )	        
 
-	      }else{ valores     <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores     <- as.data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
 	      
 	    }
 	        	    
@@ -1373,7 +1373,7 @@ ws_data_avg_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	                 
 	        valores <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )
 
-	      }else{ valores  <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores  <- data.frame( intervalAsValue )  }#endIF/ELSE
 	      
 	    }
 	    else
@@ -1400,9 +1400,9 @@ ws_data_avg_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 	        vecPromedio      <- rep( promedio, sizeSubV1  )
 	        hash::values( allDatesHash, keys=dateKeys) <- vecPromedio
 	        subValores       <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )            
-	        valores          <- data.frame( cbind( valores, subValores ) )	        
+	        valores          <- as.data.frame( cbind( valores, subValores ) )	        
 
-	      }else{ valores     <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores     <- as.data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
 	      
 	    }
 	        	    
@@ -1696,10 +1696,8 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
           res <- RPostgres::dbSendQuery(conn, q1)
           station <- data.frame(RPostgres::dbFetch(res))
           RPostgres::dbClearResult(res)
-
 	  minDate <- base::as.Date( lubridate::ymd( station$mindate[1] ) )
 	  maxDate <- base::as.Date( lubridate::ymd( station$maxdate[1] ) )
-	  
 	  #One is end in a new year.  
 	  ndays <- ( lubridate::int_length( lubridate::new_interval( base::as.Date( minDate ) , base::as.Date( maxDate )))/(3600*24))+1 
 	  dates <- as.character( seq.Date( minDate , by ="days", length.out= ndays) )
@@ -1715,20 +1713,23 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	    sDate	 <- minDate
 	    #finishDate                 
 	    fDate	 <- minDate
-	    
+
+  	    #lubridate::year( sDate )	<- lubridate::year( maxDate ) - 9   
+	    #lubridate::year( fDate )	<- lubridate::year( maxDate ) - 9
+  
 	    lubridate::year( fDate ) <- lubridate::year( fDate ) + 1    #Interval (sDate, fDate) is one year.
 
 	    #Temporal strings attached to the dates for consistency with NOAA 	    
 	    ssDate <- base::paste(sDate, "T00:00:00", sep="")
 	    ffDate <- base::paste(fDate, "T00:00:00", sep="")
-	  
+
 	    weatherVar <- rnoaa::ncdc(datasetid=ghcnd, stationid=estacion, datatypeid=type, startdate=ssDate, enddate=ffDate , limit=366, token=config$token)
 	    #Verify that available information exist
             if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
               if ( config$isgraphic ){
-                gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\n", sep="" )
               }else{
-                msg <- base::paste("Not Data Available for station ", estacion ," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                msg <- base::paste("Not Data Available for station ", estacion ," with variable type:  ", type, " exists.\t\t\t\t\n", sep="" )
                 cat( msg )
                 print("Spotted a Null\n")
               }
@@ -1819,7 +1820,8 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	        break
 	      }
 	      
-	    }
+	    }#End cycle to gather information for one weather station
+
 
 	    # TMAX = Maximum temperature (tenths of degrees C)	    
 	    promedio <- sprintf( "%.4f", mean( weatherYear$value/10 ) )     
@@ -1834,9 +1836,8 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	    if ( i == 1)
 	    {	    
 	      intervalAsDate     <- base::as.Date( weatherYear$date )
-
               # TMAX = Maximum temperature (tenths of degrees C)
-	      intervalAsValue    <- sprintf("%.4f", weatherYear$value/10)   
+	      intervalAsValue    <- sprintf("%.4f", weatherYear$value/10)  
 	      stationDataHash    <- hash::hash( intervalAsDate , intervalAsValue )                
 	      allDatesHash       <- hash::hash( dates ,  rep(1, ndays ) )         # h1 <- hash( dates , rep(1, ndays ) )   
 	      hash::values( allDatesHash, keys=intervalAsDate ) <- intervalAsValue
@@ -1858,10 +1859,8 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	        
 		#Update allDatesHash values found in 'dataKeys' with average 
 	        hash::values( allDatesHash, keys = dateKeys) <- vecPromedio
-	                 
 	        valores <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )
-
-	      }else{ valores  <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{  valores  <- as.data.frame( intervalAsValue ) }#endIF/ELSE
 	      
 	    }
 	    else
@@ -1888,9 +1887,10 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	        vecPromedio      <- rep( promedio, sizeSubV1  )
 	        hash::values( allDatesHash, keys=dateKeys) <- vecPromedio
 	        subValores       <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )            
-	        valores          <- data.frame( cbind( valores, subValores ) )	        
-
-	      }else{ valores     <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	        valores          <- as.data.frame( cbind( valores, subValores ) )	        
+	      }else{ 
+		valores     <- as.data.frame( cbind( valores, intervalAsValue ) ) 
+              }#endIF/ELSE
 	      
 	    }
 	        	    
@@ -2199,7 +2199,7 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	                 
 	        valores <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )
 
-	      }else{ valores  <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores  <- data.frame( intervalAsValue )  }#endIF/ELSE
 	      
 	    }
 	    else
@@ -2230,9 +2230,9 @@ ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	        vecPromedio      <- rep( NA, sizeSubV1  )
 	        hash::values( allDatesHash, keys=dateKeys) <- vecPromedio
 	        subValores       <- as.data.frame( hash::values( allDatesHash, keys=NULL ) )            
-	        valores          <- data.frame( cbind( valores, subValores ) )	        
+	        valores          <- as.data.frame( cbind( valores, subValores ) )	        
 
-	      }else{ valores     <- data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
+	      }else{ valores     <- as.data.frame( cbind( valores, intervalAsValue ) )  }#endIF/ELSE
 	      
 	    }
 	        	    
