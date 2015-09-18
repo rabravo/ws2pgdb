@@ -2507,7 +2507,7 @@ malaria_model <- function(tableData, disease, conn, degree){
 	    ")
   }
   tableName <- paste(tableData,"_",disease, sep="")
-  RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$malaria_eip ) )
+  RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$eip ) )
   o_clear(all=TRUE)
   return(tableName)
 }
