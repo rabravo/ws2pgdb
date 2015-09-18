@@ -2366,7 +2366,7 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 	       malaria         = model <- malaria_model(tableName, disease, conn, degree),
 	       west_nile       = model <- west_nile_model(tableName, disease, conn, degree),
 	       chikungunya     = model <- chikungunya_model(tableName,disease, conn, degree),
-	       changas         = model <- changas_model(tableName, disease, conn, degree),
+	       chagas          = model <- chagas_model(tableName, disease, conn, degree),
 	       la_crosse_virus = model <- la_crosse_virus_model(tableName,disease, conn, degree)
  	       )
     }
