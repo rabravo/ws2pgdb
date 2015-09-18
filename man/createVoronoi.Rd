@@ -2,7 +2,7 @@
 % Please edit documentation in R/ws2pgdb.R
 \name{createVoronoi}
 \alias{createVoronoi}
-\title{Creates a Voronoi tessellation}
+\title{createVoronoi creates a Voronoi tessellation}
 \usage{
 createVoronoi(tableName, the_geom, ogc_fid, scale)
 }
@@ -36,7 +36,7 @@ ghcnd <- 'GHCND'
 geoid <- '40'
 type  <- 'TMAX'
 sufix <- 'create_voronoi_example'
-tableName <- all_coor_ws_2_pg_db( ghcnd, geoid, type, sufix )
+tableName <- all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
 createVoronoi(tableName, "geom", "ogc_fid", 0.25)
 }
 

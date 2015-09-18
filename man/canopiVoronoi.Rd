@@ -2,7 +2,7 @@
 % Please edit documentation in R/ws2pgdb.R
 \name{canopiVoronoi}
 \alias{canopiVoronoi}
-\title{Creates a Postgres table with the polygones of a Voronoi tessellation that intersect a State/County.}
+\title{canopiVoronoi() creates a table with the polygones of a Voronoi tessellation that intersect a State/County.}
 \usage{
 canopiVoronoi(tableName, geoid)
 }
@@ -17,12 +17,15 @@ Function returns the name of the table containing the polygones forming the Voro
 or the value 1 when fail to find weather station information.
 }
 \description{
-The function takes the name of a existing table made of at least to columns: a column with geometric points and a column with unique identifiers for each element row in the table. The function produces a table in a Postgres database with geometries that form a Voronoi tessellation ( polygones ). The arguments needed for the function are two: a table's name and geoid number.
+The function takes the name of a existing table made of at least to columns: a column with geometric points
+and a column with unique identifiers for each element row in the table. The function produces a table in a
+Postgres database with geometries that form a Voronoi tessellation ( polygones ). The arguments needed for
+the function are two: a table's name and geoid number.
 }
 \note{
-The output table name has the following form: st_co_geoid_prefix_ws_type_v_poly.
-"st" is the U.S. State name and  "co" is the U.S. County name. The "prefix" and "type" are
-specified by the user in the all_coor_ws_2_pg_db function. The following function assumes
+The output table name has the following form: st_co_geoid_ws_sufix_type_v_poly.
+"st" is the U.S. State name and  "co" is the U.S. County name. The "sufix" and "type" are
+specified by the user in the all_coor_ws_2_pgdb function. The following function assumes
 you have postgresql-9.3, postgis-2.1, and postgresql-9.3-plr extension installed. Enable
 your database with both postgis and plr extensions with the following command in UBUNTU:
 > sudo -u dbuser psql -c "CREATE EXTENSION postgis; CREATE EXTENSION plr;
@@ -39,7 +42,7 @@ ghcnd <- 'GHCND'
 geoid <- '12087'
 type  <- 'PRCP'
 sufix <- 'example'
-tableName <- all_coor_ws_2_pg_db( ghcnd, geoid, type, sufix )
+tableName <- all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
 canopiVoronoi( tableName, geoid )
 }
 \keyword{Postgres}

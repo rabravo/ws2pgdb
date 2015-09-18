@@ -2,7 +2,7 @@
 % Please edit documentation in R/ws2pgdb.R
 \name{all_coor_ws}
 \alias{all_coor_ws}
-\title{Retrieve weather station within a region ( State/County )}
+\title{all_coor_ws() retrieve weather station within a region ( State/County )}
 \usage{
 all_coor_ws(ghcnd, geoid, type)
 }

@@ -1,6 +1,6 @@
 Package: ws2pgdb
 Title: Retrieves, manipulates, and stores data from NOAA. Uses location of weather stations to create a Voronoi tessellation
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: person("Angel", "Bravo", email = "angel.bravo@unt.edu", role =c("aut", "cre"))
 Author: Angel Bravo  [aut, cre]
 Maintainer: Angel Bravo <angel.bravo@unt.edu>
@@ -8,19 +8,22 @@ Description: The 0.2.0 version uses the rstats-db/RPostgres instead of the well-
 Depends: R (>= 3.2.0)
 License: GPL-3
 LazyData: true
-Imports:
-        deldir,
+Imports: 
 	gWidgets,
 	hash,
 	lubridate,
-	MASS,
 	RcppOctave,
 	rgdal,
 	rnoaa,
 	RPostgres,
 	sp,
         yaml
-Suggests:
+Suggests: 
+	deldir,
 	devtools,
 	gWidgetstcltk,	
-	zoo
+	MASS,
+	zoo,
+    Rcpp,
+    pkgmaker,
+    registry

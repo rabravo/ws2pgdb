@@ -1,9 +1,9 @@
-#' Retrieves NOAA data and creates a table in a Postgres database 
+#' all_coor_ws_2_pgdb retrieves NOAA data and creates a table in a Postgres database 
 #'
 #' The function retrieves the coordinates (coor) longitude and latitude; geometry of that location;
 #' name of NOAA weather stations (ws), as well as minimum and maximum date of available information.
 #' It stores all the data with in a table in a Posgresql (pg) database (db) with POSTGIS extension 
-#' installed on it. The function necessitates arguments: ghcnd, FIPS, type, geoid. The prefix argument
+#' installed on it. The function necessitates arguments: ghcnd, FIPS, type, geoid. The sufix argument
 #' is used for naming the table in the database. 
 #' The dbhost, dbport, dbname, dbuser, dbpasswd, isgraphic, and noaa_token (key to NOAA service) are 
 #' specified in a local file named pg_conf.yml that will be read in by yaml. See file format below. 
@@ -14,7 +14,7 @@
 #' @param ghcnd  String that refers to the Global Historical Climate Network (daily) dataset
 #' @param geoid  FIPS number from census tables
 #' @param type   Variable under investigation i.e. TMAX, TMIN, PRCP
-#' @param prefix Substring to named the beginnig of Postgres table
+#' @param sufix Substring to named the beginnig of Postgres table
 #' @return It returns the name of the table that was created or the string "one" when fail to find weather station information.
 #'
 #' @examples
@@ -22,7 +22,7 @@
 #' geoid <- '12087'
 #' type  <- 'PRCP'
 #' sufix <- 'all_coor'
-#' all_coor_ws_2_pg_db( ghcnd, geoid, type, sufix )
+#' all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
 #' @note
 #' pg_config.yml has the following structure
 #' 
@@ -40,11 +40,11 @@
 #' 
 #' token  : NOAA keypass
 #' 
-#' The output table name has the following form: st_co_geoid_prefix_ws_type
-#' "st" is the U.S. State name and  "co" is the U.S. County name. The prefix and type are specified by the user.
+#' The output table name has the following form: st_co_geoid_sufix_ws_type
+#' "st" is the U.S. State name and  "co" is the U.S. County name. The sufix and type are specified by the user.
 #' The function assumes that a cb_2013_us_state_20m and a cb_2013_us_county_20m exist in the postgres database.
 #' @export 
-all_coor_ws_2_pg_db <- function( ghcnd, geoid, type, prefix ){
+all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
 
   base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
@@ -88,22 +88,22 @@ all_coor_ws_2_pg_db <- function( ghcnd, geoid, type, prefix ){
   if( as.integer(geoid) < 100){  
 
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q1)
-    state <- data.frame( RPostgres::dbFetch(res) )
+    res   <- RPostgres::dbSendQuery(conn, q1)
+    state <- RPostgres::dbFetch(res) 
     RPostgres::dbClearResult(res)
-    tableName        <- base::paste(state,"_",geoid,"_",prefix,"_ws_", sep="")
+    tableName        <- base::paste(state,"_",geoid,"_ws_",sufix,"_",sep="")
 
   }else{
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q2)
-    county<- data.frame( RPostgres::dbFetch(res) )
+    res    <- RPostgres::dbSendQuery(conn, q2)
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q3)
-    state <- data.frame( RPostgres::dbFetch(res) )
+    q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    state  <- RPostgres::dbFetch(res) 
     RPostgres::dbClearResult(res)
-    tableName        <- base::paste(state, "_",county,"_",geoid,"_",prefix,"_ws_", sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_",sufix,"_",sep="")
 
   }
 
@@ -169,7 +169,7 @@ all_coor_ws_2_pg_db <- function( ghcnd, geoid, type, prefix ){
 
 
 
-#' Retrieve weather station within a region ( State/County )  
+#' all_coor_ws() retrieve weather station within a region ( State/County )  
 #'
 #' The function retrieves all NOAA weather station (ws) data available in a region ( State/County ) related
 #' to the weather variable under investigation (type).  
@@ -229,7 +229,7 @@ all_coor_ws <- function( ghcnd, geoid, type){
 
 
 
-#' Stores Weather Station in database ( County )  
+#' df_2_pgdb stores weather station in database   
 #'
 #' This function takes a data frame (with weather stations' information)
 #' and saves it as a table in a Postgres database. The function necessitates arguments: ghcnd, type, geoid,
@@ -240,7 +240,7 @@ all_coor_ws <- function( ghcnd, geoid, type){
 #' @param geoid    FIPS number from census tables
 #' @param type     Variable under investigation i.e. TMAX, TMIN, PRCP
 #' @param coor_ws  Data frame with noaa weather station information
-#' @param prefix   Help to name table at the database
+#' @param sufix   Help to name table at the database
 #' @return Function returns a data frame. When fails store the information, it return 1.
 #' @examples
 #' ghcnd  <- 'GHCND'
@@ -248,15 +248,15 @@ all_coor_ws <- function( ghcnd, geoid, type){
 #' type   <- 'PRCP'
 #' sufix <- 'example'
 #' ncdc.df <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' df_2_pg_db( ghcnd, geoid, type, ncdc.df, sufix )
+#' df_2_pgdb( ghcnd, geoid, type, ncdc.df, sufix )
 
 #' @note 
-#' The output table name has the following form: st_co_geoid_prefix_ws_type 
+#' The output table name has the following form: st_co_geoid_ws_sufix_type 
 #' "st" is the U.S. State, and  "co" is the U.S. County name. "geoid" is the fips identifier.
-#' "prefix" a character string to identify table,and "type" is the weather variable (i.e. TMAX,TMIN,PRCP).
+#' "sufix" a character string to identify table,and "type" is the weather variable (i.e. TMAX,TMIN,PRCP).
 #' The function assumes that a cb_2013_us_state_20m and a cb_2013_us_county_20m exist in the postgres database.
 #' @export
-df_2_pg_db <- function(ghcnd, geoid, type, coor_ws, prefix){
+df_2_pgdb <- function(ghcnd, geoid, type, coor_ws, sufix){
 
   base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
@@ -272,21 +272,21 @@ df_2_pg_db <- function(ghcnd, geoid, type, coor_ws, prefix){
     
     q1  <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res   <-RPostgres::dbSendQuery(conn, q1)
-    state <- data.frame( RPostgres::dbFetch(res) )
+    state <-  RPostgres::dbFetch(res) 
     RPostgres::dbClearResult(res)
-    tableName        <- base::paste(state,"_",geoid,"_",prefix,"_ws_", sep="")
+    tableName        <- base::paste(state,"_",geoid,"_ws_",sufix,"_",sep="")
 
   }else{
 
     q2  <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res   <-RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame( RPostgres::dbFetch(res) )
+    county <- RPostgres::dbFetch(res) 
     RPostgres::dbClearResult(res)
     q3  <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res   <-RPostgres::dbSendQuery(conn, q3)
-    state <- data.frame( RPostgres::dbFetch(res) )
+    state <- RPostgres::dbFetch(res) 
     RPostgres::dbClearResult(res)
-    tableName<- base::paste(state,"_",county,"_",geoid,"_",prefix,"_ws_", sep="")
+    tableName<- base::paste(state,"_",county,"_",geoid,"_ws_",sufix,"_",sep="")
 
   }
 
@@ -313,10 +313,9 @@ df_2_pg_db <- function(ghcnd, geoid, type, coor_ws, prefix){
 
     }
 
-    msg <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep="" )
+    msg <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\n", sep="" )
     cat(msg)
     RPostgres::dbDisconnect(conn)
-    ##RPostgres::dbUnloadDriver(drv)
     return(tableName)
 
   }else{
@@ -361,9 +360,12 @@ df_2_pg_db <- function(ghcnd, geoid, type, coor_ws, prefix){
 
 
 
-#' Creates a Postgres table with the polygones of a Voronoi tessellation that intersect a State/County.
+#' canopiVoronoi() creates a table with the polygones of a Voronoi tessellation that intersect a State/County.
 #'
-#' The function takes the name of a existing table made of at least to columns: a column with geometric points and a column with unique identifiers for each element row in the table. The function produces a table in a Postgres database with geometries that form a Voronoi tessellation ( polygones ). The arguments needed for the function are two: a table's name and geoid number.
+#' The function takes the name of a existing table made of at least to columns: a column with geometric points
+#' and a column with unique identifiers for each element row in the table. The function produces a table in a 
+#' Postgres database with geometries that form a Voronoi tessellation ( polygones ). The arguments needed for 
+#' the function are two: a table's name and geoid number.
 #'
 #' @keywords Voronoi, tessellation, weather station, plr, pl/r, RPostgreSQL, Postgres
 #' @param tableName Table with geometric points used to generate Voronoi tessellation
@@ -376,12 +378,12 @@ df_2_pg_db <- function(ghcnd, geoid, type, coor_ws, prefix){
 #' geoid <- '12087'
 #' type  <- 'PRCP'
 #' sufix <- 'example'
-#' tableName <- all_coor_ws_2_pg_db( ghcnd, geoid, type, sufix )
+#' tableName <- all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
 #' canopiVoronoi( tableName, geoid )
 #' @note 
-#' The output table name has the following form: st_co_geoid_prefix_ws_type_v_poly. 
-#' "st" is the U.S. State name and  "co" is the U.S. County name. The "prefix" and "type" are 
-#' specified by the user in the all_coor_ws_2_pg_db function. The following function assumes 
+#' The output table name has the following form: st_co_geoid_ws_sufix_type_v_poly. 
+#' "st" is the U.S. State name and  "co" is the U.S. County name. The "sufix" and "type" are 
+#' specified by the user in the all_coor_ws_2_pgdb function. The following function assumes 
 #' you have postgresql-9.3, postgis-2.1, and postgresql-9.3-plr extension installed. Enable 
 #' your database with both postgis and plr extensions with the following command in UBUNTU:
 #' > sudo -u dbuser psql -c "CREATE EXTENSION postgis; CREATE EXTENSION plr; 
@@ -476,7 +478,7 @@ canopiVoronoi <- function( tableName, geoid ){
 }#endFUNCTION
 
 
-#' Creates a Voronoi tessellation
+#' createVoronoi creates a Voronoi tessellation
 #'
 #' This function creates a table with polygone geometries of a Voronoi tessellation in a Postgres database.
 #'
@@ -490,7 +492,7 @@ canopiVoronoi <- function( tableName, geoid ){
 #' geoid <- '40'
 #' type  <- 'TMAX'
 #' sufix <- 'create_voronoi_example'
-#' tableName <- all_coor_ws_2_pg_db( ghcnd, geoid, type, sufix )
+#' tableName <- all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
 #' createVoronoi(tableName, "geom", "ogc_fid", 0.25)
 #'
 #' @note In https://gist.github.com/djq/4714788 you will find the query code to be loaded into the database. 
@@ -574,7 +576,7 @@ createVoronoi <- function( tableName, the_geom, ogc_fid, scale){
 
 
 
-#' Stores in table NOAA information into local or remote database server
+#' ws_metadata_2_pgdb() stores metadata of NOAA info into a local or remote database server
 #'
 #' This function works in cascade with the all_coor_ws(). This function uses the 
 #' mindate and maxdate returned from the rnoaa API data frame. Weather stations are described 
@@ -591,16 +593,16 @@ createVoronoi <- function( tableName, the_geom, ogc_fid, scale){
 #' @param geoid  FIPS number from census tables (tiger files)
 #' @param type   Variable under investigation i.e. TMAX, TMIN, PRCP
 #' @param stations The universe of stations from the rnoaa API from where the new subset will be computed.
-#' @return Returns the name of the new table of the subset of weather stations with intersecting data 
+#' @return function returns the name of the new table of the subset of weather stations with intersecting data 
 #' @examples
 #' ghcnd <- 'GHCND'
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' ws_subset_metadata_2_pg_db( geoid, type, stations ) 
+#' ws_metadata_2_pgdb( geoid, type, stations ) 
 #' @note Remember that all_coor_ws() returns a set of stations.
 #' @export
-ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
+ws_metadata_2_pgdb <- function( geoid, type, stations){
 
   base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
@@ -617,7 +619,7 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
     res   <- RPostgres::dbSendQuery(conn, q1)
     state <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_", geoid,"_ws_subset_metadata_", sep="")
+    tableName <- base::paste(state, "_", geoid,"_ws_metadata_", sep="")
 
   }else{
 
@@ -629,7 +631,7 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
     res   <- RPostgres::dbSendQuery(conn,q3)
     state <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    tableName<- base::paste(state, "_",county,"_",geoid,"_ws_subset_metadata_", sep="")
+    tableName<- base::paste(state, "_",county,"_",geoid,"_ws_metadata_", sep="")
 
   }
 
@@ -649,7 +651,7 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
   if(RPostgres::dbExistsTable(conn, tableName)){
 
 
-    msg <- base::paste("Done - Table ", tableName, " exists.\t\t\t\t\t", sep="")
+    msg <- base::paste("Done - Table ", tableName, " exists.\t\t\t\t\n", sep="")
 
     if ( config$isgraphic ){
       gWidgets::svalue(txt) <- msg
@@ -659,9 +661,7 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
     } else { cat(msg) }
     
       RPostgres::dbDisconnect(conn)
-      #RPostgres::dbUnloadDriver(drv)
       return(tableName)    
-      #return(station.df)    
 
   } else {
 
@@ -777,21 +777,21 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
 
 
 
-#' Retrieves the subset of weather data available in the intersecting weather stations
+#' ws_data_na_2_pgdb() retrieves the subset of weather data available in the intersecting weather stations
 #'
 #' Retrieves the weather data from the intersecting stations. It is known that NOAA listed
 #' available data for certain years, months, or days; however, some of this information is missing. 
 #' This function replaces the missing data with a NA value of the dataset. These value is read by 
 #' the Postgres database as an empty cell. You can confirm this using pgAdmin3 or other database manager.
 #' The purpose of this function is to store the raw data, as it is, so that, the user can decide
-#' what to do with missing points ( i.e. extrapolate). The example shows the use of ws_subset_metadata_span_2_pg_db()
-#' , but it can be very well be replaced by ws_subset_metadata_2_pg_db().  
+#' what to do with missing points ( i.e. extrapolate). The example shows the use of ws_metadata_span_2_pgdb()
+#' , but it can be very well be replaced by ws_metadata_2_pgdb().  
 #'
 #' @keywords NOAA, weather station, rgdal, RPostgreSQL, rnoaa
 #' @param ghcnd    String that refers to the Global Historical Climate Network (daily) dataset
 #' @param geoid    FIPS number from census tables
 #' @param type     Variable under investigation i.e. TMAX, TMIN, PRCP
-#' @param ws_subset_metadata  The table name of the subset of weather stations with intersecting data
+#' @param ws_metadata  The table name of the subset of weather stations with intersecting data
 #' @return Returns the name of the table that has been created. When fail, it returns 1.
 
 #' @examples
@@ -799,12 +799,12 @@ ws_subset_metadata_2_pg_db <- function( geoid, type, stations){
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <- '10'
-#' ws_subset_metadata  <-  ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
-#' ws_subset_data_na_2_pg_db(ghcnd, geoid, type, ws_subset_metadata)
+#' span <- '2'
+#' ws_metadata  <-  ws_metadata_span_2_pgdb( geoid, type, stations, span) 
+#' ws_data_na_2_pgdb(ghcnd, geoid, type, ws_metadata)
 #'
 #' @export
-ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
+ws_data_na_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 
   #FIPS <- base::paste( "FIPS:", geoid, sep="")
   base::options(guiToolkit="tcltk") 
@@ -819,21 +819,21 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
   if( as.integer(geoid) < 100){  
     q1     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q1)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",geoid,"_ws_subset_data_na_", sep="")
+    tableName <- base::paste(state, "_",geoid,"_ws_data_na_", sep="")
 
   }else{
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame(RPostgres::dbFetch(res))
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q3)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_na_", sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_na_", sep="")
 
   }
 
@@ -849,7 +849,7 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     gp   <- gWidgets::ggroup(container=w, expand=TRUE)
     txt  <- gWidgets::glabel("Creating Postgres weather information table \t\t\t\t", expand=TRUE, container=gp)
 
-  }else{ cat("Creating Postgres weather information table \t\t\t\t")}
+  }else{ cat("Creating Postgres weather information table \t\t\t\n")}
   
   if(RPostgres::dbExistsTable(conn, tableName)){
 
@@ -873,12 +873,11 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     
   }else{
     
-    q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_subset_metadata, sep="")
+    q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_metadata, sep="")
     res <- RPostgres::dbSendQuery(conn, q1)
     station <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    #print(station)
-    #return(station)
+
     minDate <- base::as.Date( lubridate::ymd( station$mindate[1] ) )
     maxDate <- base::as.Date( lubridate::ymd( station$maxdate[1] ) )
 	  
@@ -1113,18 +1112,18 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 
 
-#' ws_subset_data_avg_2_pg_db() retrieves the subset of ws with intersectin data
+#' ws_data_avg_2_pgdb() retrieves the subset of ws with intersectin data
 #'
-#' Same as ws_subset_data_na_2_pg_db() , retrieves the weather data from the intersecting stations. 
+#' Same as ws_data_na_2_pgdb() , retrieves the weather data from the intersecting stations. 
 #' It is known that NOAA enlist available data for certain years, months, or days; however, 
 #' some of this information is missing. This function replaces the missing data with the average value of the dataset. 
-#' The example shows the use of ws_subset_metadata_span_2_pg_db(), but it can be very well be replaced by ws_subset_metadata_2_pg_db().  
+#' The example shows the use of ws_metadata_span_2_pgdb(), but it can be very well be replaced by ws_metadata_2_pgdb().  
 #'
 #' @keywords NOAA, weather station, rgdal, RPostgreSQL, rnoaa
 #' @param ghcnd    String that refers to the Global Historical Climate Network (daily) dataset
 #' @param geoid    FIPS number from census tables
 #' @param type     Variable under investigation i.e. TMAX, TMIN, PRCP
-#' @param ws_subset_metadata  The table name of the subset of weather stations with intersecting data
+#' @param ws_metadata  The table name of the subset of weather stations with intersecting data
 #' @return Returns the name of the table that has been created. When fail, it returns 1.
 
 #' @examples
@@ -1132,12 +1131,12 @@ ws_subset_data_na_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span  <- '10'
-#' ws_subset_metadata  <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span ) 
-#' ws_subset_data_avg_2_pg_db( ghcnd, geoid, type, ws_subset_metadata)
+#' span <-'2'
+#' ws_metadata  <- ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+#' ws_data_avg_2_pgdb( ghcnd, geoid, type, ws_metadata)
 #'
 #' @export
-ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
+ws_data_avg_2_pgdb <- function( ghcnd, geoid, type, ws_metadata){
 
   #FIPS <- base::paste( "FIPS:", geoid, sep="")
   base::options(guiToolkit="tcltk") 
@@ -1152,21 +1151,21 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
   if( as.integer(geoid) < 100){  
     q1     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q1)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",geoid,"_ws_subset_data_avg_", sep="")
+    tableName <- base::paste(state, "_",geoid,"_ws_data_avg_", sep="")
 
   }else{
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame(RPostgres::dbFetch(res))
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q3)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_avg_", sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_avg_", sep="")
   }
 
   type      <- base::tolower(  type  )
@@ -1205,7 +1204,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
     
   } else {
 	  
-          q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_subset_metadata, sep="")
+          q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_metadata, sep="")
           res <- RPostgres::dbSendQuery(conn, q1)
           station <- data.frame(RPostgres::dbFetch(res))
           RPostgres::dbClearResult(res)
@@ -1239,9 +1238,9 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 	    #Verify that available information exist
             if(length(as.character( weatherVar$meta$totalCount)) == 0 ){
               if ( config$isgraphic ){
-                gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                gWidgets::svalue(txt) <- base::paste("Not Data Available for station ", estacion," with variable type:  ", type, " exists.\t\t\t\t", sep="" )
               }else{
-                msg <- base::paste("Not Data Available for station ", estacion ," with variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
+                msg <- base::paste("Not Data Available for station ", estacion ," with variable type:  ", type, " exists.\t\t\t\t\n", sep="" )
                 cat( msg )
                 print("Spotted a Null\n")
               }
@@ -1441,7 +1440,7 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 
 
 
-#' ws_subset_metadata_span_2_pg_db Stores NOAA information into local or remote database server
+#' ws_metadata_span_2_pgdb Stores NOAA information into local or remote database server
 #'
 #' This function uses the metadata returned from all_coor_ws which in turn uses the rnoaa API 
 #' to retrieve NOAA data. Metadata includes the mindate, and maxdate dates. 
@@ -1465,11 +1464,11 @@ ws_subset_data_avg_2_pg_db <- function( ghcnd, geoid, type, ws_subset_metadata){
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' @note Remember that all_coor_ws() returns a set of stations.
 #' @export
-ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
+ws_metadata_span_2_pgdb <- function( geoid, type, stations, span){
 
   base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
@@ -1484,22 +1483,22 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q1)
-    state <- data.frame(RPostgres::dbFetch(res))
+    state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_", geoid,"_ws_subset_metadata_span_",span,"_", sep="")
+    tableName <- base::paste(state, "_", geoid,"_ws_metadata_span_",span,"_", sep="")
 
   }else{
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q2)
-    county<- data.frame(RPostgres::dbFetch(res))
+    county<- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
 
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q3)
-    state <- data.frame(RPostgres::dbFetch(res))
+    state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName<- base::paste(state, "_",county,"_",geoid,"_ws_subset_metadata_span_",span,"_", sep="")
+    tableName<- base::paste(state, "_",county,"_",geoid,"_ws_metadata_span_",span,"_", sep="")
 
   }
 
@@ -1519,7 +1518,7 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
   if(RPostgres::dbExistsTable(conn, tableName)){
 
 
-    msg <- base::paste("\nDone - Table ", tableName, " exists.\t\t\t\t\t", sep="")
+    msg <- base::paste("\nDone - Table ", tableName, " exists.\t\t\t\t\t\n", sep="")
 
     if ( config$isgraphic ){
       gWidgets::svalue(txt) <- msg
@@ -1537,23 +1536,24 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
    df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
     
 
-    #Keep stations with maxdate year today's year and stations with mindate less or equal to (today's year minus span)
-    subIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::today())) & (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::today()) - base::as.integer(span)))) 
+    #Keep stations with maxdate year today's year 
+    subMaxIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) == lubridate::year(lubridate::today())) )
 
     #Update date to beginning of current year  
-    subIntervalYear$maxdate <- base::as.Date( lubridate::floor_date( lubridate::ymd( lubridate::today() ) , "year") )  	
+    subMaxIntervalYear$maxdate <- base::as.Date( lubridate::floor_date( lubridate::ymd( lubridate::today() ) , "year") )  	
 
-    #a threshold of years. (i.e. current year 2015, and threshold equal to the span value i.e. span <- 3 or 2012)
-    threshold   <- base::as.integer(span)
+    #print(lubridate::year(as.Date(subMaxIntervalYear$mindate)) <= (lubridate::year(lubridate::today()) - base::as.integer(span)))
+    subMinIntervalYear <- subset(subMaxIntervalYear, (lubridate::year(as.Date(mindate)) <= (lubridate::year(lubridate::today()) - base::as.integer(span))))
 
+#print(subMinIntervalYear)
     #mindate (span) set by user         
     startDate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") - lubridate::years( base::as.integer(span) ) )
 
     #Update dates to startDate value to all elements in the array
-    subIntervalYear$mindate <- base::as.Date(startDate)
+    subMinIntervalYear$mindate <- base::as.Date(startDate)
   
     #Simplistic naming return this data structure
-    station.df <- subIntervalYear                                  
+    station.df <- subMinIntervalYear                                  
     
     msg <- base::paste("Creating ", tableName, " table of ", type, "\n",sep="")    
     if ( config$isgraphic ){
@@ -1599,19 +1599,19 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
 
 
 
-#' ws_subset_data_avg_span_2_pg_db() retrieves the subset of ws with intersectin data
+#' ws_data_avg_span_2_pgdb() retrieves the subset of ws with intersectin data
 #'
-#' Same as ws_subset_data_na_2_pg_db() , retrieves the weather data from the intersecting stations. 
+#' Same as ws_data_na_2_pgdb() , retrieves the weather data from the intersecting stations. 
 #' It is known that NOAA enlist available data for certain years, months, or days; however, 
 #' some of this information is missing. This function replaces the missing data with the average value of the dataset. 
-#' The example shows the use of ws_subset_metadata_span_2_pg_db(), but it can be very well be replaced by ws_subset_metadata_2_pg_db().  
+#' The example shows the use of ws_metadata_span_2_pgdb(), but it can be very well be replaced by ws_metadata_2_pgdb().  
 #'
 #' @keywords NOAA, weather station, rgdal, RPostgreSQL, rnoaa
 #' @param ghcnd    String that refers to the Global Historical Climate Network (daily) dataset
 #' @param geoid    FIPS number from census tables
 #' @param type     Variable under investigation i.e. TMAX, TMIN, PRCP
 #' @param span	   Indicates look-back time to search for available ws stations and data
-#' @param ws_subset_metadata  The table name of the subset of weather stations with intersecting data
+#' @param ws_metadata  The table name of the subset of weather stations with intersecting data
 #' @return Returns the name of the table that has been created. When fail, it returns 1.
 
 #' @examples
@@ -1619,12 +1619,12 @@ ws_subset_metadata_span_2_pg_db <- function( geoid, type, stations, span){
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span  <- 2
-#' ws_subset_metadata  <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span ) 
-#' ws_subset_data_avg_span_2_pg_db( ghcnd, geoid, type, span, ws_subset_metadata)
+#' span <- '2'
+#' ws_metadata  <- ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+#' ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata)
 #'
 #' @export
-ws_subset_data_avg_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset_metadata){
+ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 
   #FIPS <- base::paste( "FIPS:", geoid, sep="")
   base::options(guiToolkit="tcltk") 
@@ -1639,21 +1639,21 @@ ws_subset_data_avg_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset
   if( as.integer(geoid) < 100){  
     q1     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q1)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",geoid,"_ws_subset_data_span_",span,"_avg_", sep="")
+    tableName <- base::paste(state, "_",geoid,"_ws_data_span_",span,"_avg_", sep="")
 
   }else{
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame(RPostgres::dbFetch(res))
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q3)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_span_",span,"_avg_", sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_span_",span,"_avg_", sep="")
   }
 
   type      <- base::tolower(  type  )
@@ -1692,7 +1692,7 @@ ws_subset_data_avg_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset
     
   } else {
 	  
-          q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_subset_metadata, sep="")
+          q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_metadata, sep="")
           res <- RPostgres::dbSendQuery(conn, q1)
           station <- data.frame(RPostgres::dbFetch(res))
           RPostgres::dbClearResult(res)
@@ -1932,22 +1932,22 @@ ws_subset_data_avg_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset
 
 
 
-#' ws_subset_data_na_span_2_pg_db() retrieves the subset of ws with data available in the intersecting ws
+#' ws_data_na_span_2_pgdb() retrieves the subset of ws with data available in the intersecting ws
 #'
 #' Retrieves the weather data from the intersecting stations. It is known that NOAA listed
 #' available data for certain years, months, or days; however, some of this information is missing. 
 #' This function replaces the missing data with a NA value of the dataset. These value is read by 
 #' the Postgres database as an empty cell. You can confirm this using pgAdmin3 or other database manager.
 #' The purpose of this function is to store the raw data, as it is, so that, the user can decide
-#' what to do with missing points ( i.e. extrapolate). The example shows the use of ws_subset_metadata_span_2_pg_db()
-#' , but it can be very well be replaced by ws_subset_metadata_2_pg_db().  
+#' what to do with missing points ( i.e. extrapolate). The example shows the use of ws_metadata_span_2_pgdb()
+#' , but it can be very well be replaced by ws_metadata_2_pgdb().  
 #'
 #' @keywords NOAA, weather station, rgdal, RPostgreSQL, rnoaa
 #' @param ghcnd    String that refers to the Global Historical Climate Network (daily) dataset
 #' @param geoid    FIPS number from census tables
 #' @param type     Variable under investigation i.e. TMAX, TMIN, PRCP
 #' @param span     Look-back time to search and retrieve weather data information
-#' @param ws_subset_metadata  The table name of the subset of weather stations with intersecting data
+#' @param ws_metadata  The table name of the subset of weather stations with intersecting data
 #' @return Returns the name of the table that has been created. When fail, it returns 1.
 
 #' @examples
@@ -1955,12 +1955,12 @@ ws_subset_data_avg_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset
 #' geoid <- '12087'
 #' type  <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <- '10'
-#' ws_subset_metadata  <-  ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
-#' ws_subset_data_na_span_2_pg_db(ghcnd, geoid, type, span, ws_subset_metadata)
+#' span <- '2'
+#' ws_metadata  <-  ws_metadata_span_2_pgdb( geoid, type, stations, span)
+#' ws_data_na_span_2_pgdb(ghcnd, geoid, type, span, ws_metadata)
 #'
 #' @export
-ws_subset_data_na_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset_metadata){
+ws_data_na_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 
   #FIPS <- base::paste( "FIPS:", geoid, sep="")
   base::options(guiToolkit="tcltk") 
@@ -1975,21 +1975,21 @@ ws_subset_data_na_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset_
   if( as.integer(geoid) < 100){  
     q1     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q1)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",geoid,"_ws_subset_data_na_span_",span,"_", sep="")
+    tableName <- base::paste(state, "_",geoid,"_ws_data_na_span_",span,"_", sep="")
 
   }else{
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame(RPostgres::dbFetch(res))
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
     res    <- RPostgres::dbSendQuery(conn, q3)
-    state  <- data.frame(RPostgres::dbFetch(res))
+    state  <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_subset_data_na_span_",span,"_",sep="")
+    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_na_span_",span,"_",sep="")
 
   }
 
@@ -2029,7 +2029,7 @@ ws_subset_data_na_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset_
     
   }else{
     
-    q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_subset_metadata, sep="")
+    q1 <- base::paste("select name as id, mindate as mindate, maxdate as maxdate, longitude as longitude, latitude as latitude from ", ws_metadata, sep="")
     res <- RPostgres::dbSendQuery(conn, q1)
     station <- data.frame(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
@@ -2285,9 +2285,9 @@ ws_subset_data_na_span_2_pg_db <- function( ghcnd, geoid, type, span, ws_subset_
 #' @param disease String with the name of the vector-borne disease 
 #' @return Returns the name of the table containing the completion of the latent period 
 #' @examples
-#' geoid   <- '48121'
+#' geoid   <- '12087'
 #' type    <- 'TMAX'
-#' span    <- '10'
+#' span <- '2'
 #' disease <- 'dengue'
 #' stretch_delay_latent_period( geoid, type, span, disease)
 #'
@@ -2308,7 +2308,7 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q1)
-    state <- data.frame(RPostgres::dbFetch(res))
+    state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid,"_ws_data_span_",span,"_avg_", sep="")
 
@@ -2316,12 +2316,12 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='",geoid,"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q2)
-    county <- data.frame(RPostgres::dbFetch(res))
+    county <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
 
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='",substr(geoid, 1, 2),"'", sep="")
     res   <- RPostgres::dbSendQuery(conn, q3)
-    state <- data.frame(RPostgres::dbFetch(res))
+    state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
     
     tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_span_",span,"_avg_", sep="")
@@ -2400,8 +2400,8 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 #' disease <- 'dengue'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span)
 #' tableDisease <- base::paste(tableData,"_dengue",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)
@@ -2471,8 +2471,8 @@ dengue_model <- function(tableData, disease, conn, degree){
 #' disease <- 'malaria'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' tableDisease <- base::paste(tableData,"_malaria",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)
@@ -2544,8 +2544,8 @@ malaria_model <- function(tableData, disease, conn, degree){
 #' disease <- 'west_nile'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' tableDisease <- base::paste(tableData,"_west_nile",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)
@@ -2616,8 +2616,8 @@ west_nile_model <- function(tableData, disease, conn, degree){
 #' disease <- 'chikungunya'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' tableDisease <- base::paste(tableData,"_chikungunya",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)
@@ -2687,8 +2687,8 @@ chikungunya_model <- function(tableData, disease, conn, degree){
 #' disease <- 'chagas'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' tableDisease <- base::paste(tableData,"_chagas",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)
@@ -2763,8 +2763,8 @@ chagas_model <- function(tableData, disease, conn, degree){
 #' disease <- 'la_crosse_virus'
 #' degree  <- '5'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <-'10'
-#' tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span) 
+#' span <- '2'
+#' tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' tableDisease <- base::paste(tableData,"_la_crosse_virus",sep="") 
 #' q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 #' res   <- RPostgres::dbSendQuery(conn, q)

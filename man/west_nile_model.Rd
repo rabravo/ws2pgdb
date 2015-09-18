@@ -33,8 +33,8 @@ type  <- 'TMAX'
 disease <- 'west_nile'
 degree  <- '5'
 stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span <-'10'
-tableData <- ws_subset_metadata_span_2_pg_db( geoid, type, stations, span)
+span <- '2'
+tableData <- ws_metadata_span_2_pgdb( geoid, type, stations, span)
 tableDisease <- base::paste(tableData,"_west_nile",sep="")
 q    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
 res   <- RPostgres::dbSendQuery(conn, q)

@@ -27,9 +27,9 @@ a table at the Postgres database.
 In progres ....
 }
 \examples{
-geoid   <- '48121'
+geoid   <- '12087'
 type    <- 'TMAX'
-span    <- '10'
+span <- '2'
 disease <- 'dengue'
 stretch_delay_latent_period( geoid, type, span, disease)
 }
