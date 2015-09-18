@@ -2346,7 +2346,7 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
     print(tableDisease)
     q5    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
     res   <- RPostgres::dbSendQuery(conn, q5)
-    exists <- RPostgres::dbFetch(res)
+    exists <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
     print(exists)
     if(  exists ){
