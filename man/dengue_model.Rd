@@ -16,7 +16,7 @@ dengue_model(tableData, disease, conn, degree)
 \item{degree}{is the order at one wants to adjusts the polynomio (for dengue degree=5) has the lowest norm}
 }
 \value{
-returns the tail of the data that has been found.
+returns the table name with evaluation of the model over the available data.
 }
 \description{
 dengue_model() habia una vez ...

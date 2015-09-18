@@ -2363,18 +2363,19 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 
   	switch(disease,
 	       dengue          = model <- dengue_model(tableName, disease, conn, degree),
-	       malaria         = model <- malaria_model(tableName, disease, conn),
-	       west_nile       = model <- west_nile_model(tableName, disease, conn),
-	       chikungunya     = model <- chikungunya_model(tableName,disease, conn),
-	       changas         = model <- changas_model(tableName, disease, conn),
-	       la_crosse_virus = model <- la_crosse_virus_model(tableName,disease, conn)
+	       malaria         = model <- malaria_model(tableName, disease, conn, degree),
+	       west_nile       = model <- west_nile_model(tableName, disease, conn, degree),
+	       chikungunya     = model <- chikungunya_model(tableName,disease, conn, degree),
+	       changas         = model <- changas_model(tableName, disease, conn, degree),
+	       la_crosse_virus = model <- la_crosse_virus_model(tableName,disease, conn, degree)
  	       )
     }
+
 
   }else{
 
     RPostgres::dbDisconnect(conn)
-    return(paste("Table ",tableName," data table DOES NOT exists!",sep=""))    
+    return(paste("Table ",tableName," needed for the model DOES NOT exist!",sep=""))    
   }  
   RPostgres::dbDisconnect(conn)
   return(model)
@@ -2383,11 +2384,11 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 
 #' dengue_model() habia una vez ...
 #'
-#' @param tableData is the name of the table containing weather data ( temperature )
+#' @param tableData is the name of the table containing weather data ( temperature ) 
 #' @param disease is the name of the vector-borne disease (i.e dengue, malaria, chikungunya, etc)
 #' @param conn is an open connectino to read/write to a pgdb
 #' @param degree is the order at one wants to adjusts the polynomio (for dengue degree=5) has the lowest norm
-#' @return returns the tail of the data that has been found. 
+#' @return returns the table name with evaluation of the model over the available data. 
 #' @examples
 #' file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
 #' config <- yaml::yaml.load_file( file )
