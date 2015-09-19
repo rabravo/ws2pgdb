@@ -228,7 +228,7 @@ all_coor_ws <- function( ghcnd, geoid, type){
   )
 
   
-  print(stations$id)
+  #print(stations$id)
   stations$id <- gsub("GHCND:", "", stations$id)
  
   return(stations)
