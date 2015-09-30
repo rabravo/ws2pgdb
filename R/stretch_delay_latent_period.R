@@ -55,6 +55,7 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 
   varTable  <- base::tolower( tableName  )
   type      <- base::tolower(  type  )
+  disease   <- base::tolower( disease )
   tableName <- base::paste( varTable, type, sep="")      
   tableName <- base::gsub(" ", "_", tableName)
 
@@ -65,7 +66,9 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
   exists <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
   print(exists)
+
   if( exists ){
+
     degree <- 5 #For dengue, this order has the lowest error.
     tableDisease <- base::paste(tableName,"_",disease,sep="")
     print(tableDisease)
@@ -74,16 +77,21 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
     exists <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
     print(exists)
+
     if(  exists ){
        msg <- base::paste("\nDone - Table ", tableName, "  exists.\t\t\t\t\n", sep="")
+
        if ( config$isgraphic ){
          gWidgets::svalue(txt) <- msg
          #svalue(txt2) <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\n", sep="" )
          Sys.sleep(3)    
          gWidgets::gmessage("Double check your data table exsist.\n")
+
        }else{ cat(msg) }
+
          RPostgres::dbDisconnect(conn)
          return(paste("Table ", tableDisease," data table exists!",sep=""))    
+
     }else{
 
   	switch(disease,
