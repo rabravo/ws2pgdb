@@ -157,14 +157,14 @@ dengue_model <- function(tableData, disease, conn, degree){
 \
 	      for j=1:columns(real_temp)\
 		for k=1:rows(real_temp)\
-		  if (real_temp(k,j) >= 32)\
+		  if (real_temp(k,j) > 32)\
 		    eip(k,j) = 7;\
-		  elseif( real_temp(k,j) <= 24 && real_temp(k,j) > 0)\
-		    eip(k,j) = 25;\
-		  elseif(real_temp(k,j) <= 0)\
-		    eip(k,j) = 0;\
-		  else\
+		  elseif( real_temp(k,j) >= 24 && real_temp(k,j) <= 32)\
 		    eip(k,j) = dengue_m( real_temp(k,j) );\
+		  elseif( real_temp(k,j) >= 16.4 && real_temp(k,j) < 24 )\
+		    eip(k,j) = 25;\
+		  else\
+		    eip(k,j) = 0.0;\
 		  endif\
 	        endfor\
 	     endfor\ 
