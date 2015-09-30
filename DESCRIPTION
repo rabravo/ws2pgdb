@@ -26,4 +26,5 @@ Suggests:
 	zoo,
     Rcpp,
     pkgmaker,
-    registry
+    registry,
+    testthat
