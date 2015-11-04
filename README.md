@@ -10,6 +10,7 @@ The following function enables the communication between the vector-borne simula
 
 Copy, paste, and execute these queries on the pgsql server.
 
+```
 CREATE OR REPLACE FUNCTION public.r_all_coor_ws(text, text, text)
   RETURNS SETOF all_coor_ws_type AS
 $BODY$ 
@@ -133,7 +134,7 @@ $BODY$
   
   q1             <- base::paste("SELECT r_create_tiger_tracts_table('",geoid ,"')",sep="")
   tigertableName <- pg.spi.exec( sprintf("%1$s",q1) )
-  table_cluster  <- paste( tigertableName, "_clustered_by_nearest_ws", sep="")  
+  table_cluster  <- paste( tigertableName, "_clustered_by_nearest_ws", sep="")
   
   # tractce) Build the distance matrix from the subregion's centroid to all weather stations
   # geoid: tract geoid; path2Hub: text form of geom; 
@@ -175,7 +176,7 @@ $BODY$
   q4_check <- base::paste("SELECT r_table_exists('",midas_pop_clustered_by_nearest_ws,"')", sep="")
   if( as.integer( pg.spi.exec( sprintf("%1$s",q4_check) ) ) ){
     print("Exists!");
-  }else{  
+  }else{
     q4 <- base::paste("
     with\
       tractce As(\
@@ -222,7 +223,7 @@ url		<- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
 geoid		<- arg1
 #geoid		<- "12087"
 
-if( as.integer(geoid) < 100){  
+if( as.integer(geoid) < 100){
     
     q1    <- base::paste( "select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     state <- as.character( pg.spi.exec( sprintf( "%1$s", q3 ) ) )
@@ -232,7 +233,7 @@ if( as.integer(geoid) < 100){
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
     county<- as.character( pg.spi.exec( sprintf( "%1$s", q2 ) ) )
-    st_geoid <- substr(geoid, 1, 2)  
+    st_geoid <- substr(geoid, 1, 2)
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", st_geoid,"'", sep="")
     state <- as.character( pg.spi.exec( sprintf( "%1$s", q3 ) ) )
     pre   <- base::paste(state, "_", county,"_",sep="")
@@ -281,7 +282,7 @@ DECLARE
 c INT;
 BEGIN 
   EXECUTE 'CREATE TABLE "'
-	|| arg1     
+	|| arg1 
 	||'" (stcotrbg  CHAR(14), hh_race SMALLINT, hh_income DOUBLE PRECISION, hh_size SMALLINT, hh_age SMALLINT, latitude DOUBLE PRECISION, longitude DOUBLE PRECISION );'; 
 	RETURN arg1; 
 END;
@@ -297,7 +298,7 @@ DECLARE
 c INT;
 BEGIN 
   EXECUTE 'CREATE TABLE "'
-	|| var     
+	|| var 
 	||'" (stcotrbg  CHAR(14), hh_race SMALLINT, hh_income DOUBLE PRECISION, hh_size SMALLINT, hh_age SMALLINT, latitude DOUBLE PRECISION, longitude DOUBLE PRECISION );'; 
 	RETURN 0; 
 	EXCEPTION 
@@ -320,7 +321,7 @@ url		<- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
 geoid		<- arg1
 #geoid		<- "12087"
 
-if( as.integer(geoid) < 100){  
+if( as.integer(geoid) < 100){
     
     q1    <- base::paste( "select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     state <- as.character( pg.spi.exec( sprintf( "%1$s", q1 ) ) )
@@ -367,7 +368,7 @@ if ( tableExist ){
   q7 <- paste("rm ", pwd, "/", "temp/*",sep="")
   system(q7)
     return(pretableName)
-}    
+}
 $BODY$
   LANGUAGE plr;
 
@@ -1200,23 +1201,4 @@ return(.libPaths())
 $BODY$
   LANGUAGE plr;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
