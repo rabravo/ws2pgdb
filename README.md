@@ -5,7 +5,7 @@ Another useful function within the package is that that iteratively request seve
 
 
 
-#PLSQL
+#PLR/SQL and PLPGSQL
 The following function enables the communication between the vector-borne simulator and the pgsql ( database ).
 
 Copy, paste, and execute these queries on the pgsql server.
