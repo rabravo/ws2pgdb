@@ -122,7 +122,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_create_county_info(text, text, text)
   RETURNS text AS
 $BODY$
-  #i.e. SELECT r_create_county_info('12087', 'TMAX', '10') 
+  #SELECT r_create_county_info('12087', 'TMAX', '10') 
   geoid <- arg1
   type  <- arg2
   span  <- arg3
@@ -169,7 +169,7 @@ $BODY$
   midasExist     <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)  
 
-  #$if( base::as.integer( pg.spi.exec( sprintf("%1$s",q3_check) ) ) ){
+  #if( base::as.integer( pg.spi.exec( sprintf("%1$s",q3_check) ) ) ){
   if( midasExist ){
     print("Exists!");
   }else{
