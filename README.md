@@ -122,20 +122,32 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_create_county_info(text, text, text)
   RETURNS text AS
 $BODY$
-  #SELECT r_create_county_info('12087', 'TMAX', '10') 
+  #i.e. SELECT r_create_county_info('12087', 'TMAX', '10') 
   geoid <- arg1
   type  <- arg2
   span  <- arg3
   ghcnd <- 'GHCND'
- 
-  stations       <-  ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
-  ws_metadata <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
 
-  
+
+  pgfile   <- base::paste(Sys.getenv("PWD"), "/","pg_config.yml", sep="")
+  config   <- yaml::yaml.load_file( pgfile )
+  drv    <- RPostgres::Postgres()
+
+  #To override auth, provide your passwd via the .pgpass (see postgresql documentation)
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+
+
+  stations       <-  ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
+  ws_metadata    <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+
+
   q1             <- base::paste("SELECT r_create_tiger_tracts_table('",geoid ,"')",sep="")
-  tigertableName <- pg.spi.exec( sprintf("%1$s",q1) )
+  res            <- RPostgres::dbSendQuery(conn, q1)
+  tigertableName <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)      
+  #tigertableName <- pg.spi.exec( sprintf("%1$s",q1) )
   table_cluster  <- paste( tigertableName, "_clustered_by_nearest_ws", sep="")
-  
+
   # tractce) Build the distance matrix from the subregion's centroid to all weather stations
   # geoid: tract geoid; path2Hub: text form of geom; 
   # geom As poly: tract polygone
@@ -143,17 +155,25 @@ $BODY$
   # dist: length of the geometry
   # name: name of weather station
 
-  q2 <- base::paste("SELECT r_create_midas_synth_hh_table('",geoid ,"')",sep="")
-  midastableName <- pg.spi.exec( sprintf("%1$s",q2) )
-  temp      <- tigertableName
-  midas_pop <- base::gsub("tiger_tracts", "midas_pop", temp)
+  q2             <- base::paste("SELECT r_create_midas_synth_hh_table('",geoid ,"')",sep="")
+  res            <- RPostgres::dbSendQuery(conn, q2)
+  midastableName <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)  
+  #midastableName <- pg.spi.exec( sprintf("%1$s",q2) )
+  temp           <- tigertableName
+  midas_pop      <- base::gsub("tiger_tracts", "midas_pop", temp)
   midas_pop_clustered_by_nearest_ws <- base::paste(midas_pop,"_clustered_by_nearest_ws",sep="")
-  q3_check  <- base::paste("SELECT r_table_exists('",table_cluster,"')", sep="")
 
-  if( base::as.integer( pg.spi.exec( sprintf("%1$s",q3_check) ) ) ){
+  q3_check       <- base::paste("SELECT r_table_exists('",table_cluster,"')", sep="")
+  res            <- RPostgres::dbSendQuery(conn, q3_check)
+  midasExist     <- as.integer(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)  
+
+  #$if( base::as.integer( pg.spi.exec( sprintf("%1$s",q3_check) ) ) ){
+  if( midasExist ){
     print("Exists!");
   }else{
-  
+
     q3 <- base::paste("\
     with\
       tractce As(\
@@ -163,30 +183,42 @@ $BODY$
         SELECT geoid, min( dist ) as min_dist FROM tractce GROUP BY geoid\
       ),\
       line2Hub As(\
-	SELECT tractce.geoid, tractce.geom as poly, ST_AsText(tractce.geomLine), tractce.centroid, name, min_dist FROM tractce, geoidDistance WHERE geoidDistance.min_dist = dist ORDER BY tractce.name \
+    SELECT tractce.geoid, tractce.geom as poly, ST_AsText(tractce.geomLine), tractce.centroid, name, min_dist FROM tractce, geoidDistance WHERE geoidDistance.min_dist = dist ORDER BY tractce.name \
       ),\
       cluster_ws As(\
         SELECT name, ST_MULTI( ST_UNION(poly) ) FROM line2Hub GROUP BY name\
       )\
       SELECT * INTO ", table_cluster , " FROM cluster_ws ",  sep="")
-    q3_out <- pg.spi.exec( sprintf("%1$s",q3) )
+
+    res        <- RPostgres::dbSendQuery(conn, q3)
+    q3_out     <- as.integer(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)      
+    #q3_out <- pg.spi.exec( sprintf("%1$s",q3) )
   }
 
 
-  q4_check <- base::paste("SELECT r_table_exists('",midas_pop_clustered_by_nearest_ws,"')", sep="")
-  if( as.integer( pg.spi.exec( sprintf("%1$s",q4_check) ) ) ){
+  q4_check          <- base::paste("SELECT r_table_exists('",midas_pop_clustered_by_nearest_ws,"')", sep="")
+  res               <- RPostgres::dbSendQuery(conn, q4_check)
+  midasClusterExist <- as.integer(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)        
+  
+  #if( as.integer( pg.spi.exec( sprintf("%1$s",q4_check) ) ) ){
+  if( midasClusterExist ){
+  
     print("Exists!");
+    
   }else{
+  
     q4 <- base::paste("
     with\
       tractce As(\
-	SELECT ogc_fid as ws_id, tract.geoid10 as geoid, tract.the_geom as geom, ST_MakeLine(ST_Centroid( tract.the_geom), coord.geom ) as geomLine, ST_Length( ST_MakeLine(ST_Centroid( tract.the_geom), coord.geom ) ) as dist, coord.name, ST_Centroid( tract.the_geom ) as centroid FROM ", tigertableName, " tract, ", ws_metadata , " coord ORDER BY dist ASC\
+    SELECT ogc_fid as ws_id, tract.geoid10 as geoid, tract.the_geom as geom, ST_MakeLine(ST_Centroid( tract.the_geom), coord.geom ) as geomLine, ST_Length( ST_MakeLine(ST_Centroid( tract.the_geom), coord.geom ) ) as dist, coord.name, ST_Centroid( tract.the_geom ) as centroid FROM ", tigertableName, " tract, ", ws_metadata , " coord ORDER BY dist ASC\
       ),\
       geoidDistance As(\
-	SELECT geoid, min( dist ) as dist FROM tractce GROUP BY geoid --ORDER BY dist\
+    SELECT geoid, min( dist ) as dist FROM tractce GROUP BY geoid --ORDER BY dist\
       ),\
       line2Hub As(\
-	SELECT  DISTINCT ON (gd.geoid) ws_id, t.geomLine, t.geom as poly, t.name, gd.geoid, gd.dist FROM geoidDistance gd, tractce t WHERE gd.geoid = t.geoid  AND abs(gd.dist - t.dist) < 0.0000001\
+    SELECT  DISTINCT ON (gd.geoid) ws_id, t.geomLine, t.geom as poly, t.name, gd.geoid, gd.dist FROM geoidDistance gd, tractce t WHERE gd.geoid = t.geoid  AND abs(gd.dist - t.dist) < 0.0000001\
       ),\
       ind_per_bg As(\
         SELECT stcotrbg As geoid, SUM(hh_size) As hh FROM ", midastableName," GROUP BY stcotrbg ORDER BY stcotrbg\
@@ -201,14 +233,17 @@ $BODY$
         SELECT ws_id, name, sum(hh) as hh, ST_MULTI( ST_UNION(poly) ) as poly FROM syn_pop GROUP BY name, ws_id\
       )\
       SELECT * INTO ", midas_pop_clustered_by_nearest_ws, " FROM cluster_pop ORDER BY ws_id", sep="")
-      
-    q4_out <- pg.spi.exec( sprintf("%1$s",q4) )
+
+    res      <- RPostgres::dbSendQuery(conn, q4)
+    q4_out   <- as.integer(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+    #q4_out <- pg.spi.exec( sprintf("%1$s",q4) )
   }
 
   ws2pgdb::ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
   ws2pgdb::ws_data_na_span_2_pgdb(  ghcnd, geoid, type, span, ws_metadata )
 
-  
+
   return(midas_pop_clustered_by_nearest_ws)
 
 $BODY$
