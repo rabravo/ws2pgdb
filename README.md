@@ -744,21 +744,26 @@ driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-q0     <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
+q0      <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
+res     <- RPostgres::dbSendQuery(conn, q0)
+prefix  <- base::as.character(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
+#prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,"_",disease,sep="")
 q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
 
-wsModel <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
+res     <- RPostgres::dbSendQuery(conn, q1)
+wsModel <- base::data.frame(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
+#wsModel <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
+
 wsModel <- wsModel[1:length(wsModel[,1]),]
 ws      <- base::paste("\"",wsModel[wsNum],"\"",sep="")
 q2      <- base::paste("SELECT ",ws," FROM ", t1 , sep="")
 res     <- RPostgres::dbSendQuery(conn, q2)
-wsValue <- data.frame(RPostgres::dbFetch(res))
-
+wsValue  <- base::data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
-RPostgres::dbDisconnect(conn)
 
 return(wsValue)
 $BODY$
