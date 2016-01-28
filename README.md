@@ -253,59 +253,80 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_create_midas_synth_hh_table(text)
   RETURNS text AS
 $BODY$
-pwd		<- base::Sys.getenv("PWD")
-url		<- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
-geoid		<- arg1
-#geoid		<- "12087"
+#i.e. SELECT r_create_midas_synth_hh_table('12087')
+
+pwd     <- base::Sys.getenv("PWD")
+url     <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
+geoid       <- arg1
+
+file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+config <- yaml::yaml.load_file( file )
+
+drv    <- RPostgres::Postgres()
+conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+
 
 if( as.integer(geoid) < 100){
-    
-    q1    <- base::paste( "select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    state <- as.character( pg.spi.exec( sprintf( "%1$s", q3 ) ) )
-    pre   <- base::paste(state, "_", sep="")
+
+  res    <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", geoid) )
+  state  <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)    
+  pre    <- base::paste(state, "_", sep="")
 
 }else{
 
-    q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    county<- as.character( pg.spi.exec( sprintf( "%1$s", q2 ) ) )
-    st_geoid <- substr(geoid, 1, 2)
-    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", st_geoid,"'", sep="")
-    state <- as.character( pg.spi.exec( sprintf( "%1$s", q3 ) ) )
-    pre   <- base::paste(state, "_", county,"_",sep="")
+  res    <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_county_20m where GEOID='%1$s'", geoid) )
+  county <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)    
+  
+  st_geoid <- substr(geoid, 1, 2)
+  res   <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'",st_geoid) )
+  state <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)    
+
+  pre   <- base::paste(state, "_", county,"_",sep="")
 }
 
-pre       <- tolower( pre )
-pre       <- gsub(" ", "_", pre)
+pre        <- tolower( pre )
+pre        <- gsub(" ", "_", pre)
 
 tableName  <- paste(pre, geoid,"_midas_synth_hh", sep="")
-q4 <- base::paste("SELECT r_table_exists('", tableName,"')", sep ="")
-tableExist  <- as.integer( pg.spi.exec( sprintf( "%1$s", q4 ) ) )
+res        <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_exists('%1$s')", tableName) )
+tableExist <- as.integer(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
 
 if ( tableExist ){
   return(tableName)
 }else{
 
-  debug <- as.integer( pg.spi.exec( sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) ) )
+  res   <- RPostgres::dbSendQuery(conn, sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) )
+  debug <- as.integer(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
   print(debug)
-  
-  file		<- base::paste("2010_ver1_",geoid,sep="")
-  pfile		<- base::paste(pwd,"/","2010_ver1_",geoid,sep="")
-  extractedFile	<- base::paste(file, "_synth_households.txt", sep="")
-  updatedFile	<- base::paste(pfile, "_synth_hh.csv", sep="")
-  zipFile	<- base::paste(pfile,".zip", sep="")
-  download	<- base::paste(url, file, ".zip",sep="")
+
+  file      <- base::paste("2010_ver1_",geoid,sep="")
+  pfile     <- base::paste(pwd,"/","2010_ver1_",geoid,sep="")
+  extractedFile <- base::paste(file, "_synth_households.txt", sep="")
+  updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
+  zipFile   <- base::paste(pfile,".zip", sep="")
+  download  <- base::paste(url, file, ".zip",sep="")
   downloader::download( download , dest=zipFile, mode="wb")
   utils::unzip(paste(pfile,".zip",sep=""), file=extractedFile) 
-  input		<- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
-  out 		<- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
+  input     <- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
+  out       <- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
   utils::write.csv(out,file=updatedFile, row.names=FALSE)
-  q4 <-pg.spi.exec( sprintf( "COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile) )
+
+  res   <- RPostgres::dbSendQuery(conn, sprintf( "COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile) )
+  err <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)  
+    
   q5 <- paste("rm ",zipFile," ",updatedFile," ",extractedFile,sep="")
   system(q5)
+  
   return(tableName)
 }
 $BODY$
-  LANGUAGE plr;
+  LANGUAGE plr
 
 
 
