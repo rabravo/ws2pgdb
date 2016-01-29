@@ -1232,14 +1232,15 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION public.r_ws_values(text, text, text, text, text)
+CREATE OR REPLACE FUNCTION public.r_ws_values(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_ws_values('48061','10','TMAX','4')
+# i.e. SELECT r_ws_values('12087','10','TMAX','4')
+# Just in case DROP FUNCTION r_ws_values(text,text,text,text) CASCADE 
 
 geoid  <- as.character(arg1)
 span   <- as.character(arg2)
-type   <- as.character(arg4)
+type   <- as.character(arg3)
 type   <- tolower(type)
 wsNum  <- as.integer(arg4)
 
@@ -1249,20 +1250,26 @@ driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-q0     <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
+
+res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+prefix <- as.character(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)  
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,sep="")
 
-q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
-wsName <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
+res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
+wsName <- base::data.frame(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res) 
+
 wsName <- wsName[2:length(wsName[,1]),]
 ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
-q2     <- base::paste("SELECT ",ws," FROM ", t1 , sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
+
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
 wsValue  <- data.frame(RPostgres::dbFetch(res))
+
 RPostgres::dbClearResult(res)
 RPostgres::dbDisconnect(conn)
+
 return(wsValue)
 $BODY$
   LANGUAGE plr;
