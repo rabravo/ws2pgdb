@@ -254,7 +254,6 @@ $BODY$
   LANGUAGE plr;
 
 
-
 CREATE OR REPLACE FUNCTION public.r_create_midas_synth_hh_table(text)
   RETURNS text AS
 $BODY$
@@ -270,32 +269,12 @@ config <- yaml::yaml.load_file( file )
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
+res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+pre  <- as.character(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)    
 
-if( as.integer(geoid) < 100){
 
-  res    <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", geoid) )
-  state  <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)    
-  pre    <- base::paste(state, "_", sep="")
-
-}else{
-
-  res    <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_county_20m where GEOID='%1$s'", geoid) )
-  county <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)    
-  
-  st_geoid <- substr(geoid, 1, 2)
-  res   <- RPostgres::dbSendQuery( conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'",st_geoid) )
-  state <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)    
-
-  pre   <- base::paste(state, "_", county,"_",sep="")
-}
-
-pre        <- tolower( pre )
-pre        <- gsub(" ", "_", pre)
-
-tableName  <- paste(pre, geoid,"_midas_synth_hh", sep="")
+tableName  <- paste(pre,"midas_synth_hh", sep="")
 res        <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_exists('%1$s')", tableName) )
 tableExist <- as.integer(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
@@ -943,7 +922,6 @@ file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
 config <- yaml::yaml.load_file( file )
 geoid  <- arg1
 
-driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
