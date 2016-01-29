@@ -369,80 +369,60 @@ CREATE OR REPLACE FUNCTION public.r_create_tiger_tracts_table(text)
   RETURNS text AS
 $BODY$
 
-pgfile   <- base::paste(Sys.getenv("PWD"), "/","pg_config.yml", sep="")
+pgfile <- base::paste(Sys.getenv("PWD"), "/","pg_config.yml", sep="")
 print(pgfile)
-pwd     <- base::Sys.getenv("PWD")
+pwd    <- base::Sys.getenv("PWD")
 print(pwd)
+config <- yaml::yaml.load_file( pgfile )
+geoid  <- arg1
 
-config   <- yaml::yaml.load_file( pgfile )
-
-url     <- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
-geoid       <- arg1
-geoid      <- "12087"
-
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
 
 #To override auth, provide your passwd via the .pgpass (see postgresql documentation)
+drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
+prefix <- base::as.character(RPostgres::dbFetch(res))
+pretableName <- base::paste(prefix, geoid, "_tiger_tracts",sep="")
+RPostgres::dbClearResult(res)
 
-if( as.integer(geoid) < 100){
-
-    q1    <- base::paste( "select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q1)
-    state <- as.character(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)    
-    #state <- as.character( pg.spi.exec( sprintf( "%1$s", q1 ) ) )
-    pre   <- base::paste(state, "_", sep="")
-
-}else{
-
-    q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q2)
-    county<- as.character(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)    
-    #county<- as.character( pg.spi.exec( sprintf( "%1$s", q2 ) ) )
-
-    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q3)
-    state <- as.character(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)        
-    #state <- as.character( pg.spi.exec( sprintf( "%1$s", q3 ) ) )
-    pre   <- base::paste(state, "_", county,"_",sep="")
-}
-
-state     <- gsub(" ", "_", state)
-pre       <- gsub(" ", "_", pre)
-pre       <- tolower( pre )
-
-file      <- base::paste("tl_2010_",geoid,"_tract10",sep="")
-ext       <- ".zip"
-url   <- base::paste("ftp://ftp2.census.gov/geo/pvs/tiger2010st/",substr(geoid, 1, 2),"_",state,"/",geoid,"/",sep="")
-
-tableName    <- base::paste(file, sep="")
-pretableName <- base::paste(pre, geoid, "_tiger_tracts",sep="")
-
-q4 <- base::paste("SELECT r_table_exists('", pretableName,"')", sep ="")
-res   <- RPostgres::dbSendQuery(conn, q4)
-tableExist <- as.integer( RPostgres::dbFetch(res) )
-RPostgres::dbClearResult(res)    
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", pretableName) )
+tableExist <- base::as.integer( RPostgres::dbFetch(res) )
+RPostgres::dbClearResult(res)
 
 if ( tableExist ){
+
   return(pretableName)
+
 }else{
-  pfile      <- base::paste(pwd,"/",file,sep="")
+
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_fips_2_state('%1$s')", geoid) )
+  state  <- base::as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+
+  state  <- gsub(" ", "_", state)
+  ftp    <- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
+  url    <- base::paste(ftp, substr(geoid, 1, 2), "_", state, "/", geoid, "/", sep="")
+  
+  file   <- base::paste("tl_2010_",geoid,"_tract10",sep="")
+  tableName  <- base::paste(file, sep="")
+  ext    <- ".zip"
+  
+  pfile  <- base::paste(pwd,"/",file,sep="")
   download   <- base::paste(url, file, ext, sep="")
   zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
   downloader::download( download , dest=zipFile, mode="wb")
-  dir        <- base::paste(pwd,"/","temp",sep="")
+  dir    <- base::paste(pwd,"/","temp",sep="")
   utils::unzip(zipFile, overwrite = 'TRUE', exdir=dir)
-  ext        <-".shp"
-  q5  <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
+  ext    <-".shp"
+  
+  q5     <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
   system(q5)
-  q6  <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
+  
+  q6     <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
   system(q6)
-  q7 <- paste("rm ", pwd, "/", "temp/*",sep="")
+  
+  q7     <- paste("rm ", pwd, "/", "temp/*",sep="")
   system(q7)
 
   return(pretableName)
