@@ -1224,8 +1224,6 @@ RPostgres::dbClearResult(res)
 wsName <- wsName[2:length(wsName[,1]),]
 ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
 
-
-
 return(ws)
 $BODY$
   LANGUAGE plr;
@@ -1274,46 +1272,6 @@ return(wsValue)
 $BODY$
   LANGUAGE plr;
 
-
-
-
-
-
-CREATE OR REPLACE FUNCTION public.r_ws_values(text, text, text, text)
-  RETURNS SETOF text AS
-$BODY$
-# i.e. SELECT r_ws_values('48061','10','TMAX','4')
-# Just in case DROP FUNCTION r_ws_values(text,text,text,text) CASCADE 
-
-geoid  <- as.character(arg1)
-span   <- as.character(arg2)
-type   <- as.character(arg3)
-type   <- tolower(type)
-wsNum  <- as.integer(arg4)
-
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-
-q0     <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
-
-t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,sep="")
-
-q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
-wsName <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
-wsName <- wsName[2:length(wsName[,1]),]
-ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
-q2     <- base::paste("SELECT ",ws," FROM ", t1 , sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
-wsValue  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-RPostgres::dbDisconnect(conn)
-return(wsValue)
-$BODY$
-  LANGUAGE plr;
 
 
 
