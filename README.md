@@ -832,6 +832,36 @@ $BODY$
 
 
 
+CREATE OR REPLACE FUNCTION public.r_fips_2_state(text)
+  RETURNS text AS
+$BODY$ 
+
+#i.e. SELECT r_fips_2_state('12') or SELECT r_fips_2_state('12087')
+#out: 'Florida'
+
+file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+config <- yaml::yaml.load_file( file )
+geoid   <- arg1
+
+
+driver <- "PostgreSQL"
+drv    <- RPostgres::Postgres()
+conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+
+res  <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", substr(geoid, 1, 2) ) )
+nom  <- RPostgres::dbFetch(res)
+RPostgres::dbClearResult(res)
+
+return(nom)
+
+$BODY$
+  LANGUAGE plr;
+
+
+
+
+
+
 CREATE OR REPLACE FUNCTION public.r_read_population_size(text)
   RETURNS integer AS
 $BODY$ 
