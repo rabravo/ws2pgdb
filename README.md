@@ -895,22 +895,22 @@ config <- yaml::yaml.load_file( file )
 driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-geoid  <- arg1
-q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-res    <- RPostgres::dbSendQuery(conn, q1)
+
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
 nameTable  <- data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
 
 metainfoTable    <- base::paste(nameTable, "ws_metadata_span_",span,"_",type ,sep="")
-q2     <- base::paste("SELECT name FROM ", metainfoTable, sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
+
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT name FROM %1$s", metainfoTable) )
 ws  <- data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
+
 RPostgres::dbDisconnect(conn)
   return(ws)
+
 $BODY$
   LANGUAGE plr;
-
 
 
 
