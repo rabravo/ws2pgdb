@@ -837,7 +837,7 @@ CREATE OR REPLACE FUNCTION public.r_fips_2_state(text)
 $BODY$ 
 
 #i.e. SELECT r_fips_2_state('12') or SELECT r_fips_2_state('12087')
-#out: 'florida'
+#out: 'Florida'
 
 file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
 config <- yaml::yaml.load_file( file )
@@ -852,15 +852,10 @@ res  <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_
 nom  <- RPostgres::dbFetch(res)
 RPostgres::dbClearResult(res)
 
-nom           <- tolower( nom  )
-nom          <-  gsub(" ", "_", nom)
-nom          <-  gsub("-", "_", nom)
-
 return(nom)
 
 $BODY$
-  LANGUAGE plr;
-
+  LANGUAGE plr
 
 
 
