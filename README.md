@@ -691,12 +691,12 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_model_colname(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_model_colname('48061','10','malaria','4')
+# i.e. SELECT r_model_colname('12087','10','dengue','4')
 
 geoid  <- as.character(arg1)
 span   <- as.character(arg2)
 disease<- arg3
-wsNum    <- as.integer(arg4)
+wsNum  <- as.integer(arg4)
 
 file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
 config <- yaml::yaml.load_file( file )
@@ -704,26 +704,23 @@ driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-q0      <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-res     <- RPostgres::dbSendQuery(conn, q0)
+res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
 prefix  <- base::as.character(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
-#prefix  <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax_",disease,sep="")
 
-q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
-res      <- RPostgres::dbSendQuery(conn, q1)
+res      <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
 wsModel  <- base::data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
-#wsModel <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
+
 wsModel  <- wsModel[1:length(wsModel[,1]),]
 ws       <- base::paste("\"",wsModel[wsNum],"\"",sep="")
 
 return(ws)
 
 $BODY$
-  LANGUAGE plr;
+  LANGUAGE plr; 
 
 
 
