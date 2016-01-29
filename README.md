@@ -326,7 +326,7 @@ if ( tableExist ){
   return(tableName)
 }
 $BODY$
-  LANGUAGE plr
+  LANGUAGE plr;
 
 
 
@@ -835,7 +835,7 @@ RPostgres::dbClearResult(res)
 return(nom)
 
 $BODY$
-  LANGUAGE plr
+  LANGUAGE plr;
 
 
 
@@ -949,30 +949,29 @@ drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
   if( as.integer(geoid) < 100){
-
-    q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q1)
+    
+    res   <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", geoid))
     state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
+    
     tableName <- base::paste(state,"_",geoid,"_",sep="")
 
   }else{
 
-    q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q2)
+    res   <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_county_20m where GEOID='%1$s'", geoid))
     county<- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
-    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q3)
+    RPostgres::dbClearResult(res) 
+
+    res   <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", substr(geoid, 1, 2)))
     state <- RPostgres::dbFetch(res)
     RPostgres::dbClearResult(res)
+    
     tableName <- base::paste(state, "_",county,"_",geoid,"_", sep="")
   }
-  
+
   varTable           <- tolower( tableName  )
   tableName          <-  gsub(" ", "_", varTable)
   tableName          <-  gsub("-", "_", varTable)
-
 
   return(tableName)
 
