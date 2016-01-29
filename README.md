@@ -727,6 +727,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_model_values(text, text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
+# i.e. SELECT r_model_values('12087','10','dengue','4','TMAX')
 # i.e. SELECT r_model_values('48061','10','malaria','4','TMIN')
 
 geoid  <- base::as.character(arg1)
@@ -742,24 +743,20 @@ driver <- "PostgreSQL"
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-q0      <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-res     <- RPostgres::dbSendQuery(conn, q0)
+res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
 prefix  <- base::as.character(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
-#prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,"_",disease,sep="")
-q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
 
-res     <- RPostgres::dbSendQuery(conn, q1)
+res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
 wsModel <- base::data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
-#wsModel <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
 
 wsModel <- wsModel[1:length(wsModel[,1]),]
 ws      <- base::paste("\"",wsModel[wsNum],"\"",sep="")
-q2      <- base::paste("SELECT ",ws," FROM ", t1 , sep="")
-res     <- RPostgres::dbSendQuery(conn, q2)
+
+res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
 wsValue  <- base::data.frame(RPostgres::dbFetch(res))
 RPostgres::dbClearResult(res)
 
