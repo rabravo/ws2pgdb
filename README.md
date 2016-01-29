@@ -24,9 +24,14 @@ return(ws[,c("id","longitude","latitude")])
 $BODY$
   LANGUAGE plr;
 
+
+--This function below here is not properly working; fix this or remove soon.
+
 CREATE OR REPLACE FUNCTION public.r_column_names(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
+
+#THIS FUNCTINO IS NOT WORKING
 #i.e. SELECT r_column_names('48061','10','malaria')
 
 geoid  <- as.character(arg1)
@@ -34,26 +39,34 @@ span   <- as.character(arg2)
 disease<- arg3
 num    <- as.integer(arg4)
 
-q0     <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
+file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+config <- yaml::yaml.load_file( file )
+
+drv    <- RPostgres::Postgres()
+conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+
+
+res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+prefix <- base::as.character(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax",sep="")
 t2  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax_",disease,sep="")
 
-q2 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
-wsName <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q2 ) ))
+res    <- RPostgres::dbSendQuery( conn, sprintf( "SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1 ) )
+wsName <- base::data.frame(RPostgres::dbFetch(res))
 wsName <- wsName[2:length(wsName[,1]),]
+RPostgres::dbClearResult(res)
 
-q3 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t2, "' ) as g", sep="")
-
-wsModel <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q3 ) ))
+res    <- RPostgres::dbSendQuery( conn, sprintf( "SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t2 ) )
+wsModel <- base::data.frame(RPostgres::dbFetch(res))
 wsTempAndModel <- data.frame( c( wsName[num], wsModel[num] ) )
+RPostgres::dbClearResult(res)
 
 return(wsTempAndModel)
 
 $BODY$
   LANGUAGE plr;
-
 
 
 
