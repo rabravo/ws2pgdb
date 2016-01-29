@@ -368,14 +368,13 @@ print(pwd)
 config <- yaml::yaml.load_file( pgfile )
 geoid  <- arg1
 
-
 #To override auth, provide your passwd via the .pgpass (see postgresql documentation)
 drv    <- RPostgres::Postgres()
 conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
 res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
 prefix <- base::as.character(RPostgres::dbFetch(res))
-pretableName <- base::paste(prefix, geoid, "_tiger_tracts",sep="")
+pretableName <- base::paste(prefix, "tiger_tracts",sep="")
 RPostgres::dbClearResult(res)
 
 res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", pretableName) )
@@ -422,6 +421,7 @@ if ( tableExist ){
 
 $BODY$
   LANGUAGE plr;
+  
 
 
 CREATE OR REPLACE FUNCTION public.r_gen_data_avg_span_2_pgdb(text, text, text, text)
