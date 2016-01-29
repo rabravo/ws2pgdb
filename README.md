@@ -1194,25 +1194,37 @@ $BODY$
 
 
 
+
+
 CREATE OR REPLACE FUNCTION public.r_ws_colname(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_ws_colname('48061','10','malaria','4')
+# i.e. SELECT r_ws_colname('12087','10','dengue','4')
 
 geoid  <- as.character(arg1)
 span   <- as.character(arg2)
 disease<- arg3
 wsNum    <- as.integer(arg4)
 
-q0     <- base::paste("SELECT r_table_prefix('",geoid,"')",sep="")
-prefix <- base::as.character( pg.spi.exec( sprintf( "%1$s", q0 ) ) )
+file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+config <- yaml::yaml.load_file( file )
+drv    <- RPostgres::Postgres()
+conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+prefix  <- base::as.character(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
 
 t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax",sep="")
 
-q1 <- base::paste("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '", t1, "' ) as g", sep="")
-wsName <- base::data.frame(pg.spi.exec( sprintf( "%1$s", q1 ) ))
+res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
+wsName  <- base::data.frame(RPostgres::dbFetch(res))
+RPostgres::dbClearResult(res)
+
 wsName <- wsName[2:length(wsName[,1]),]
 ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
+
+
 
 return(ws)
 $BODY$
