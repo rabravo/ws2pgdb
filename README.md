@@ -3,6 +3,7 @@ Package contains several functions that retrieve, filter, and store NOAA data in
 One useful function is that that takes weather station location in a region and constructs a Voronoi tessellation over that region (you will need a GIS software to visualize the output which is a set of geometries/polygones). 
 Another useful function within the package is that that iteratively request several years of data from the NOAA digital warehouse. Since NOAA permits only one year of data requested at a time, via the rnoaa package. It is particular useful when many years of information are needed. 
 
+A few system libraries are needed before you can start using the ws2pgdb. Some of the methods necesitate the octave development tools, and gdal (octave-dev, liboctave, gdal, libgeos). Try to install the ws2pgdb and the installer will let you know when a library is needed. This maybe a slow process but if you are using any debian-like, you can make us of the package manager to install them (apt-get). 
 
 
 #PLR/SQL and PLPGSQL
