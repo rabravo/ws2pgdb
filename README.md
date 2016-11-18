@@ -5,6 +5,16 @@ Another useful function within the package is that that iteratively request seve
 
 A few system libraries are needed before you can start using the ws2pgdb. Some of the methods necesitate the octave development tools, gdal, proj (octave-dev, liboctave, libgdal, libproj-dev). Try to install the ws2pgdb and the installer will let you know when a library is needed. This maybe a slow process but if you are using any debian-like, you can make us of the package manager to install them (apt-get). 
 
+If you use devtools::install_github(rabravo/ws2pgdb), sometimes it complains that some of the dependencies are not compatible. To install these dependencies you shall do as in the following example:
+
+In a fresh installation, after a couple of months not touching this libraries, I got the error mentioned above for the RPostgres library. The way I solve the problem was to use:
+
+  devtools::install_github("rstats-db/RPostgres")
+
+For other dependency problems I used,
+
+  sudo su - -c "R -e \"install.packages('packagename', repos='http://cran.rstudio.com/')\""
+
 
 #PLR/SQL and PLPGSQL
 The following function enables the communication between the vector-borne simulator and the pgsql ( database ).
