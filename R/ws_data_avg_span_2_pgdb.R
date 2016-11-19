@@ -98,7 +98,7 @@ ws_data_avg_span_2_pgdb <- function( ghcnd, geoid, type, span, ws_metadata){
 	  minDate <- base::as.Date( lubridate::ymd( station$mindate[1] ) )
 	  maxDate <- base::as.Date( lubridate::ymd( station$maxdate[1] ) )
 	  #One is end in a new year.  
-	  ndays <- ( lubridate::int_length( lubridate::new_interval( base::as.Date( minDate ) , base::as.Date( maxDate )))/(3600*24))+1 
+	  ndays <- ( lubridate::int_length( lubridate::interval( base::as.Date( minDate ) , base::as.Date( maxDate )))/(3600*24))+1 
 	  dates <- as.character( seq.Date( minDate , by ="days", length.out= ndays) )
 	
 	  #The NOAA API only allows queries from users to retrieve data sets by year; 
