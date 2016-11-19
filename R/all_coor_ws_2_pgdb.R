@@ -141,7 +141,7 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
 
     print( base::paste("Creating ", tableName, " table of ", type , sep="") )
     Sys.sleep(3)
-    coord             <- as.data.frame( stations[,c("longitude","latitude")] )
+    coord             <- base::as.data.frame( stations[,c("longitude","latitude")] )
     proj              <- "+init=epsg:4269"
     sp                <- sp::SpatialPoints(coord)
     spdf              <- sp::SpatialPointsDataFrame(sp, coord)
