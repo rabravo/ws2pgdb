@@ -115,7 +115,6 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
   tableName	     <-  gsub(" ", "_", tableName)
   
   if(RPostgres::dbExistsTable(conn, tableName)){
-
     if ( config$isgraphic ){
 
       gWidgets::svalue(txt) <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep="" )
@@ -151,10 +150,10 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, sufix ){
     spdf$mindate      <- stations$mindate
     spdf$maxdate      <- stations$maxdate
     spdf$name	      <- stations$id
-    
     OGRstring         <- base::paste("PG:dbname=", config$dbname, " user=", config$dbuser," password=", config$dbpwd, " host=", config$dbhost," port=", config$dbport, sep = "")
-    coord_error       <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer='TRUE', verbose='TRUE')
-
+    print(colnames( tableName ) )
+    print( tableName )
+    coord_error       <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer='TRUE', verbose=TRUE)
     print("Done! check Postgresql table.")
     
   }#endIF/ELSE

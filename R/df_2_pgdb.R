@@ -112,7 +112,7 @@ df_2_pgdb <- function(ghcnd, geoid, type, coor_ws, sufix){
     OGRstring<- base::paste("PG:dbname=",config$dbname," user=",config$dbuser," password=",config$dbpwd, " host=",config$dbhost," port=",config$dbport,sep = "")
 
     #Need handling error
-    coord_error<- rgdal::writeOGR(spdf,OGRstring,layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer = 'TRUE', verbose = 'TRUE')
+    coord_error<- rgdal::writeOGR(spdf,OGRstring,layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer = 'TRUE', verbose =TRUE)
 
     if(config$isgraphic){ gWidgets::gmessage("Finished. Check Postgresql table!") }
     else{ print("Finished. Check Postgresql table!")  }

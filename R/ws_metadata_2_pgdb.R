@@ -178,7 +178,7 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
    
     OGRstring   <- base::paste("PG:dbname=", config$dbname, " user=", config$dbuser," password=", config$dbpwd, " host=", config$dbhost," port=", config$dbport, sep = "")
        
-    coord_error <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", overwrite_layer=TRUE, tableName, driver=driver, verbose='TRUE')  
+    coord_error <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", overwrite_layer=TRUE, tableName, driver=driver, verbose=TRUE)  
      
     if(config$isgraphic){
       gWidgets::gmessage("Finished. Check Postgres table!")
