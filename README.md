@@ -22,6 +22,9 @@ The following function enables the communication between the vector-borne simula
 Copy, paste, and execute these queries on the pgsql server.
 
 ```
+
+CREATE TYPE all_coor_ws_type AS (id text ,lon text ,lat text );
+
 CREATE OR REPLACE FUNCTION public.r_all_coor_ws(text, text, text)
   RETURNS SETOF all_coor_ws_type AS
 $BODY$ 
@@ -987,6 +990,8 @@ $BODY$
   LANGUAGE plr;
 
 
+CREATE TYPE r_voronoi_type AS (id integer, polygon geometry);
+
 
 CREATE OR REPLACE FUNCTION public.r_voronoi(text, text, text)
   RETURNS SETOF r_voronoi_type AS
@@ -1086,7 +1091,7 @@ $BODY$
 
 
 CREATE OR REPLACE FUNCTION public.r_voronoi_scale(text, text, text, double precision)
-  RETURNS SETOF r_voronoi_scale_type AS
+  RETURNS SETOF r_voronoi_type AS
 $BODY$
 library(deldir)
 # select the point x/y coordinates into a data frame
