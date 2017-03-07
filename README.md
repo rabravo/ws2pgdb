@@ -5,7 +5,7 @@ Another useful function within the package is that that iteratively request seve
 
 Problems:
 
-Some system libraries are needed before you can start using the ws2pgdb. Some of the methods necesitate the octave development tools, gdal, proj (octave-dev, liboctave, libgdal, libproj-dev). Try to install the ws2pgdb and the installer will let you know when a library is needed. This maybe a slow process but if you are using any debian-like, you can make us of the package manager to install them (apt-get). 
+Some system libraries are needed before you can start using the ws2pgdb. Some of the methods necesitate the octave development tools, gdal, proj (octave-dev, liboctave, libgdal, libproj-dev). Try to install the ws2pgdb and the installer will let you know when a library is needed. This maybe a slow process but if you are using any debian-like, you can make used of the package manager to install them (apt-get). 
 
 
 During a fresh installation, after a couple of months without touching this libraries, I tried devtools::install_github(rabravo/ws2pgdb) and it complained that some of the dependencies were not compatible. To install these dependencies you shall do as in the following example:
