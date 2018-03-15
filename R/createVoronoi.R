@@ -26,22 +26,9 @@
 #' @export
 createVoronoi <- function( tableName, the_geom, ogc_fid, scale){
 
-  base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
-  driver <- "PostgreSQL"
-
-  if ( config$isgraphic ){
-
-    w   <- gWidgets::gwindow("Message: ", width=500)
-    gp  <- gWidgets::ggroup(container=w, expand=TRUE)
-    txt <- gWidgets::glabel("Downloading data and creating Postgresql table \t\t\t\t", expand=TRUE, container=gp)
-
-  }else{
-
-    print("Downloading data and creating Postgres table ...\t\t\t\t ")
-
-  }
+  print("Downloading data and creating Postgres table ...\t\t\t\t ")
 
   if( !is.null( tableName ) ){   
     
@@ -51,40 +38,24 @@ createVoronoi <- function( tableName, the_geom, ogc_fid, scale){
 
     if( RPostgres::dbExistsTable( conn, voronoiTableName) ){
 
-      if ( config$isgraphic ){
-   
-        gWidgets::svalue( txt ) <- base::paste("Done -Table ", voronoiTableName, " exists.\t\t\t\t\t", sep="" )
-        Sys.sleep( 3 )    
-        gWidgets::gmessage( "Check Postgresql table." )
-      
-      }else{
-
-        txt <- base::paste("Done - Table ", voronoiTableName, " exists.\t\t\t\t\t", sep="" )
-        cat(txt)
-      }
-
+      txt <- base::paste("Done - Table ", voronoiTableName, " exists.\t\t\t\t\t", sep="" )
+      cat(txt)
       RPostgres::dbDisconnect( conn )
-      #RPostgres::dbUnloadDriver(drv)
       return( voronoiTableName )
 
     }
 
     query <-base::paste(" select * into ", voronoiTableName ," from r_voronoi_scale('", tableName , "','" , the_geom , "', '", ogc_fid , "',", scale, " );", sep="")
 
-    #Alternative: invoke system() to execute the query
-    #psql_query <- base::paste("psql -U ", dbuser, " -d ", dbname, " -c \"", query, "\"", sep="")
-    #msg <- system(psql_query) 
+    # Alternative: invoke system() to execute the query
+    # psql_query <- base::paste("psql -U ", dbuser, " -d ", dbname, " -c \"", query, "\"", sep="")
+    # msg <- system(psql_query) 
     res <- RPostgres::dbSendQuery( conn, query)
     msg <- data.frame(RPostgres::dbFetch(res))   
     RPostgres::dbClearResult(res)
     RPostgres::dbDisconnect(conn)
-    #RPostgres::dbUnloadDriver(drv)           
-    
     return(voronoiTableName)
 
-  }else{
-
-    return('1')
-  }
+  } else { return('1') }
 
 }#endFUNCTION

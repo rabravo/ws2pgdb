@@ -12,7 +12,7 @@
 #' @examples
 #' geoid   <- '12087'
 #' type    <- 'TMAX'
-#' span <- '2'
+#' span    <- '2'
 #' disease <- 'dengue'
 #' stretch_delay_latent_period( geoid, type, span, disease)
 #'
@@ -38,19 +38,16 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
   if(!flag){
     return( base::paste("No model of '",disease,"' disease implemented yet! :(",sep="") )    
   }
-  #Verifies whether the model has been implemented
 
+  # Verifies whether the model has been implemented
 
-  base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
 
-
-  driver <- "PostgreSQL"
   drv    <- RPostgres::Postgres()
   conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-
+  # Test whether the user input a county or state
   if( as.integer(geoid) < 100){  
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
@@ -73,7 +70,7 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
     
     tableName <- base::paste(state, "_",county,"_",geoid,"_ws_data_span_",span,"_avg_", sep="")
 
-  }
+  }# endIF/ELSE
 
   varTable  <- base::tolower( tableName  )
   type      <- base::tolower(  type  )
@@ -81,40 +78,27 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
   tableName <- base::paste( varTable, type, sep="")      
   tableName <- base::gsub(" ", "_", tableName)
 
-  #print(tableName)
-
-  q4    <- base::paste("select r_table_exists('", tableName,"')", sep="")
-  res   <- RPostgres::dbSendQuery(conn, q4)
+  q4     <- base::paste("select r_table_exists('", tableName,"')", sep="")
+  res    <- RPostgres::dbSendQuery(conn, q4)
   exists <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
-  #print(exists)
 
-  if( exists ){
+  if ( exists ) {
 
     degree <- 5 #For dengue, this order has the lowest error.
     tableDisease <- base::paste(tableName,"_",disease,sep="")
-    #print(tableDisease)
-    q5    <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q5)
+    q5     <- base::paste("select r_table_exists('", tableDisease,"')", sep="")
+    res    <- RPostgres::dbSendQuery(conn, q5)
     exists <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    #print(exists)
 
-    if(  exists ){
+    if ( exists ) {
        msg <- base::paste("\nDone - Table ", tableName, "  exists.\t\t\t\t\n", sep="")
+       cat(msg)
+       RPostgres::dbDisconnect(conn)
+       return(paste("Table ", tableDisease," data table exists!",sep=""))    
 
-       if ( config$isgraphic ){
-         gWidgets::svalue(txt) <- msg
-         #svalue(txt2) <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\n", sep="" )
-         Sys.sleep(3)    
-         gWidgets::gmessage("Double check your data table exsist.\n")
-
-       }else{ cat(msg) }
-
-         RPostgres::dbDisconnect(conn)
-         return(paste("Table ", tableDisease," data table exists!",sep=""))    
-
-    }else{
+    } else {
 
   	switch(disease,
 	       dengue          = model <- dengue_model_conn( tableName, disease, conn, degree),
@@ -124,14 +108,15 @@ stretch_delay_latent_period <- function(geoid, type, span, disease){
 	       chagas          = model <- chagas_model_conn( tableName, disease, conn, degree),
 	       la_crosse_virus = model <- la_crosse_virus_model_conn( tableName, disease, conn, degree)
  	       )
-    }
+    }# endIF/ELSE
 
 
-  }else{
+  } else {
 
     RPostgres::dbDisconnect(conn)
     return(paste("Table ",tableName," needed for the model DOES NOT exist!",sep=""))    
-  }  
+  }# endIF/ELSE  
+
   RPostgres::dbDisconnect(conn)
   return(model)
 }

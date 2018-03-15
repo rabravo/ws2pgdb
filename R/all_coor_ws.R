@@ -16,36 +16,17 @@
 #' @export
 all_coor_ws <- function( ghcnd, geoid, type){
 
-  base::options(guiToolkit="tcltk") 
-  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-  config <- yaml::yaml.load_file( file )
-  FIPS<- base::paste("FIPS:", geoid, sep="")
+  file    <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config  <- yaml::yaml.load_file( file )
+  FIPS    <- base::paste("FIPS:", geoid, sep="")
+  # Retrieve station info
+  ws      <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
 
-  if ( config$isgraphic ){
+  stations<- ws$data
 
-    w   <- gWidgets::gwindow("Message: ", width=500)
-    gp  <- gWidgets::ggroup(container=w, expand=TRUE)
-    txt <- gWidgets::glabel("Downloading data \t\t\t\t", expand=TRUE, container=gp)
-
-  }
-
-  #Extract stations    
-  ws <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
-
-  stations <- ws$data
-
-  if( length( which( stations$id == FALSE) ) > 0  ){
-    if ( config$isgraphic ){
-
-      gWidgets::svalue(txt) <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
-
-    }else{
-
+  if ( length( which( stations$id == FALSE) ) > 0  ) {
       msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep="" )
       cat( msg )
-
-    }
-
     return('1')
   }
 
@@ -55,8 +36,6 @@ all_coor_ws <- function( ghcnd, geoid, type){
          TMIN = stations <- subset(stations, id != "GHCND:USW00013907" & id != "GHCND:USW00093928")
   )
 
-  
-  #print(stations$id)
   stations$id <- gsub("GHCND:", "", stations$id)
  
   return(stations)

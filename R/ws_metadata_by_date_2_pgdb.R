@@ -18,137 +18,111 @@
 #' @param span This is the threshold used to limit the search .
 #' @return Returns the name of the new table of the subset of weather stations with intersecting data 
 #' @examples
-#' ghcnd <- 'GHCND'
-#' geoid <- '48113'
-#' type  <- 'TMAX'
+#' ghcnd    <- 'GHCND'
+#' geoid    <- '48113'
+#' type     <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' ssDate <- '2000-01-01'
-#' ffDate <- '2001-01-01'
+#' ssDate   <- '2000-01-01'
+#' ffDate   <- '2001-01-01'
 #' ws_metadata_by_date_2_pgdb( geoid, type, stations, ssDate, ffDate) 
 #' @note Remember that all_coor_ws() returns a set of stations.
 #' @export
 ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate){
 
-  base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
 
-  driver <- "PostgreSQL"
-  drv    <- RPostgres::Postgres()
-  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  drv <- "PostgreSQL"
+  conn   <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
 
   sDate  <- gsub("-", "", ssDate)
   fDate  <- gsub("-", "", ffDate)
 
-  if( as.integer(geoid) < 100){  
+  if ( as.integer(geoid) < 100) {
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q1)
-    state <- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q1)
+    state <- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid,"_ws_metadata_from_",sDate,"_to_",fDate, sep="")
 
-  }else{
+  } else {
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q2)
-    county<- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q2)
+    county<- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
 
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q3)
-    state <- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q3)
+    state <- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
     tableName<- base::paste(state, "_",county,"_",geoid,"_ws_metadata_from_",sDate,"_to_",fDate, sep="")
 
-  }
+  }# endIF/ELSE
 
   varTable  <- tolower( tableName  )
   type      <- tolower(  type  )
   tableName <- base::paste( varTable,"_", type, sep="")      
   tableName <- gsub(" ", "_", tableName)
-  
-  if ( config$isgraphic ){
 
-    w   <- gWidgets::gwindow("Message: ", width=500)
-    gp  <- gWidgets::ggroup(container=w, expand=TRUE)
-    txt <- gWidgets::glabel("", expand=TRUE, container=gp)
-
-  }
-
-  if(RPostgres::dbExistsTable(conn, tableName)){
-
+  if (RPostgres::dbExistsTable(conn, tableName)) {
 
     msg <- base::paste("\nDone - Table ", tableName, " exists.\t\t\t\t\t\n", sep="")
-
-    if ( config$isgraphic ){
-      gWidgets::svalue(txt) <- msg
-      #svalue(txt2) <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep="" )
-      Sys.sleep(3)    
-      gWidgets::gmessage("Check Postgresql table.\n")
-    } else { cat(msg) }
-    
-    RPostgres::dbDisconnect(conn)
-    #RPostgres::dbUnloadDriver(drv)
+    Sys.sleep(3)    
+    cat(msg)
+    RPostgreSQL::dbDisconnect(conn)
+    RPostgreSQL::dbUnloadDriver(drv)
     return(tableName)    
 
   } else {
 
-   df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
+    df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
     
 
-    #Keep stations with maxdate year greater or equal to ffDate year 
+    # Keep stations with maxdate year greater or equal to ffDate year 
     subMaxIntervalYear <- subset(df, (lubridate::year(as.Date(maxdate)) >= lubridate::year(base::as.Date(ffDate))))
 
-    #Update date to the beginning of ffDate year  
+    # Update date to the beginning of ffDate year  
     subMaxIntervalYear$maxdate <- base::as.Date( lubridate::ymd( ffDate ) )  	
     
-    #Keep stations with mindate year less or equal to ssDate year
+    # Keep stations with mindate year less or equal to ssDate year
     subMinIntervalYear <- subset(subMaxIntervalYear, (lubridate::year(as.Date(mindate)) <= lubridate::year(base::as.Date(ssDate))))
 
-    #print(subMinIntervalYear)
+    # print(subMinIntervalYear)
     startDate <- base::as.Date( lubridate::ymd( ssDate ) )
 
-    #Update dates to startDate value to all elements in the array
+    # Update dates to startDate value to all elements in the array
     subMinIntervalYear$mindate <- base::as.Date(startDate)
   
-    #Simplistic naming return this data structure
+    # Simplistic naming return this data structure
     station.df <- subMinIntervalYear                                  
     
     msg <- base::paste("Creating ", tableName, " table of ", type, "\n",sep="")    
-    if ( config$isgraphic ){
-
-      gWidgets::svalue(txt) <- msg #"Creating table ...\t\t\t\t\t"
-      Sys.sleep(3)
-
-    }else{ cat(msg) }
-
-    coord <- as.data.frame( station.df[,c("longitude","latitude")] )
+    Sys.sleep(3)
+    cat(msg)
+    pts   <- as.data.frame( station.df[,c("longitude","latitude")] )
+    coord <- sp::SpatialPoints(pts)
+    spdf  <- sp::SpatialPointsDataFrame(coord, pts)
     proj  <- "+init=epsg:4269"
-    sp    <- sp::SpatialPoints(coord)
-    spdf  <- sp::SpatialPointsDataFrame(sp, coord)
     sp::proj4string(spdf) <- proj #CRS(proj)
 
-    #Insert attributes into the SpatialPointsDataFrame 
+    # Insert attributes into the SpatialPointsDataFrame 
     spdf$name	 <- station.df$id
-    #filter       <- name_and_date.df[ name_and_date.df$id %in% station.df$id, ] 
     spdf$mindate <- station.df$mindate
     spdf$maxdate <- station.df$maxdate
    
-    OGRstring   <- base::paste("PG:dbname=", config$dbname, " user=", config$dbuser," password=", config$dbpwd, " host=", config$dbhost," port=", config$dbport, sep = "")
-       
-    coord_error <- rgdal::writeOGR(spdf, OGRstring, layer_options = "geometry_name=geom", overwrite_layer=TRUE, tableName, driver=driver, verbose=TRUE)  
+    rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
    
-    if(config$isgraphic){
-      gWidgets::gmessage("Finished. Check Postgres table!\n")
-    }else{cat("Finished. Check Postgres table\n")}
+    cat("Finished. Check Postgres table\n")
   
     station.df <- spdf 
    
-  }#endIF/ELSE
+  }# endIF/ELSE
   
-  RPostgres::dbDisconnect(conn)
+  RPostgreSQL::dbDisconnect(conn)
+  RPostgreSQL::dbUnloadDriver(drv)
 
   return(tableName)
-}#endFUNCTION
+}# endFUNCTION

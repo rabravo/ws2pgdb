@@ -5,7 +5,7 @@
 #' Postgres database with geometries that form a Voronoi tessellation ( polygones ). The arguments needed for 
 #' the function are two: a table's name and geoid number.
 #'
-#' @keywords Voronoi, tessellation, weather station, plr, pl/r, RPostgreSQL, Postgres
+#' @keywords Voronoi, tessellation, weather station, plr, pl/r, Postgres
 #' @param tableName Table with geometric points used to generate Voronoi tessellation
 #' @param geoid    The geoid is needed to identify the boundaries of intersection, 
 #' where the generating points reside, that is in a State or a County.
@@ -22,7 +22,7 @@
 #' The output table name has the following form: st_co_geoid_ws_sufix_type_v_poly. 
 #' "st" is the U.S. State name and  "co" is the U.S. County name. The "sufix" and "type" are 
 #' specified by the user in the all_coor_ws_2_pgdb function. The following function assumes 
-#' you have postgresql-9.3, postgis-2.1, and postgresql-9.3-plr extension installed. Enable 
+#' you have postgresql-9.x/-10.x, postgis-2.x, and postgresql-9.x-plr extension installed. Enable 
 #' your database with both postgis and plr extensions with the following command in UBUNTU:
 #' > sudo -u dbuser psql -c "CREATE EXTENSION postgis; CREATE EXTENSION plr; 
 #' where dbuser is the owner of the database. Moreover, in https://gist.github.com/djq/4714788 
@@ -35,53 +35,32 @@
 #' @export
 canopiVoronoi <- function( tableName, geoid ){
 
-
-  base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
   driver <- "PostgreSQL"
 
-  if ( config$isgraphic ){
+  print("Downloading data and creating Postgres table ...\t\t\t\t ")
 
-    w   <- gWidgets::gwindow("Message: ", width=500)
-    gp  <- gWidgets::ggroup(container=w, expand=TRUE)
-    txt <- gWidgets::glabel("Downloading data and creating Postgresql table \t\t\t\t", expand=TRUE, container=gp)
+  if ( !is.null( tableName ) ) {
 
-  }else{
+      driver <- "PostgreSQL"
+      drv    <- RPostgres::Postgres()
+      conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+      voronoiTableName  <- as.character( base::paste( tableName, "_v_poly",sep="") )
 
-    print("Downloading data and creating Postgres table ...\t\t\t\t ")
-
-  }
-
-  if( !is.null( tableName ) ){   
- 
-     drv  <- RPostgres::Postgres()
-     conn <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-     voronoiTableName  <- as.character( base::paste( tableName, "_v_poly",sep="") )
-
-    if( RPostgres::dbExistsTable( conn, voronoiTableName) ){
-
-      if ( config$isgraphic ){
-
-        gWidgets::svalue( txt ) <- base::paste("Done -Table ", voronoiTableName, " exists.\t\t\t\t\t", sep="" )
-        Sys.sleep( 3 )    
-        gWidgets::gmessage( "Check Postgresql table." )
-
-      }else{
-
+      if ( RPostgres::dbExistsTable( conn, voronoiTableName) ) {
         txt <- base::paste("Done - Table ", voronoiTableName, " exists.\t\t\t\t\t", sep="" )
         cat(txt)
+        RPostgres::dbDisconnect(conn)
+        return( voronoiTableName )
+      }# endIF
 
-      }
-
-      RPostgres::dbDisconnect(conn)
-      #RPostgres::dbUnloadDriver(drv)
-      return( voronoiTableName )
-
-    }
-
-    #Intersection between the boundary of the county and the voronoi tesselation     
-    if( as.integer(geoid) < 100){ tigerDB <- "cb_2013_us_state_20m" }else{ tigerDB <- "cb_2013_us_county_20m"} 
+    # Intersection between the boundary of the county and the voronoi tesselation     
+    if ( as.integer(geoid) < 100) { 
+		tigerDB <- "cb_2013_us_state_20m" 
+    } else { 
+		tigerDB <- "cb_2013_us_county_20m"
+	}# endIF
 
     geoid        <- as.character( geoid )
     voronoiTable <- base::paste(" r_voronoi('", tableName ,"', 'geom' , 'ogc_fid' )", sep="")
@@ -95,22 +74,20 @@ canopiVoronoi <- function( tableName, geoid ){
 		   SELECT id, ST_Intersection( v.polygon, t.geom) as v_polygon FROM voronoi as v, county as t )\
 	 SELECT * INTO ", voronoiTableName , " FROM output;" , sep="")
 
-    #Invoke the system to execute the query
-    #psql_query         <- base::paste("psql -U ", dbuser, " -d us_gisdb -c \"", intersection, "\"", sep="")
-    #msg <- system(psql_query) 
+      # Invoke the system to execute the query
+      # psql_query         <- base::paste("psql -U ", dbuser, " -d us_gisdb -c \"", intersection, "\"", sep="")
+      # msg <- system(psql_query) 
 
-    query   <- intersection
-    res <- RPostgres::dbSendQuery(conn, intersection)
-    msg <- data.frame(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)
-    RPostgres::dbDisconnect(conn)
-    #RPostgres::dbUnloadDriver(drv)           
-    
-    return(voronoiTableName)
+      query   <- intersection
+      res     <- RPostgres::dbSendQuery(conn, intersection)
+      msg     <- data.frame(RPostgres::fetch(res))
+      RPostgres::dbClearResult(res)
+      RPostgres::dbDisconnect(conn) 
+      return(voronoiTableName)
 
-  }else{
+    } else {
    
        return('1')
-  }
+    }# endIF/ELSE
 
 }#endFUNCTION

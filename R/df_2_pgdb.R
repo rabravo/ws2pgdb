@@ -12,10 +12,10 @@
 #' @param sufix   Help to name table at the database
 #' @return Function returns a data frame. When fails store the information, it return 1.
 #' @examples
-#' ghcnd  <- 'GHCND'
-#' geoid  <- '36061'
-#' type   <- 'PRCP'
-#' sufix <- 'example'
+#' ghcnd   <- 'GHCND'
+#' geoid   <- '36061'
+#' type    <- 'PRCP'
+#' sufix   <- 'example'
 #' ncdc.df <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
 #' df_2_pgdb( ghcnd, geoid, type, ncdc.df, sufix )
 
@@ -27,34 +27,30 @@
 #' @export
 df_2_pgdb <- function(ghcnd, geoid, type, coor_ws, sufix){
 
-  base::options(guiToolkit="tcltk") 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
 
+  drv    <- "PostgreSQL"
+  conn   <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-  driver <- "PostgreSQL"
-  drv    <- RPostgres::Postgres()
-  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-
-
-  if( as.integer(geoid) < 100){
+  if ( as.integer(geoid) < 100) {
     
-    q1  <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q1)
-    state <-  RPostgres::dbFetch(res) 
-    RPostgres::dbClearResult(res)
-    tableName        <- base::paste(state,"_",geoid,"_ws_",sufix,"_",sep="")
+    q1       <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
+    res      <- RPostgreSQL::dbSendQuery(conn, q1)
+    state    <- RPostgreSQL::fetch(res) 
+    RPostgreSQL::dbClearResult(res)
+    tableName<- base::paste(state,"_",geoid,"_ws_",sufix,"_",sep="")
 
-  }else{
+  } else {
 
-    q2  <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q2)
-    county <- RPostgres::dbFetch(res) 
-    RPostgres::dbClearResult(res)
-    q3  <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <-RPostgres::dbSendQuery(conn, q3)
-    state <- RPostgres::dbFetch(res) 
-    RPostgres::dbClearResult(res)
+    q2 	     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
+    res      <- RPostgreSQL::dbSendQuery(conn, q2)
+    county   <- RPostgreSQL::fetch(res) 
+    RPostgreSQL::dbClearResult(res)
+    q3       <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
+    res      <- RPostgreSQL::dbSendQuery(conn, q3)
+    state    <- RPostgreSQL::fetch(res) 
+    RPostgreSQL::dbClearResult(res)
     tableName<- base::paste(state,"_",county,"_",geoid,"_ws_",sufix,"_",sep="")
 
   }
@@ -64,38 +60,22 @@ df_2_pgdb <- function(ghcnd, geoid, type, coor_ws, sufix){
   tableName  <- base::paste( varTable, type, sep="")
   tableName  <- gsub(" ", "_",tableName)
 
-  if ( config$isgraphic ){
+  if (RPostgreSQL::dbExistsTable(conn, tableName)) {
 
-    w   <- gWidgets::gwindow("Message: ", width=500)
-    gp  <- gWidgets::ggroup(container=w, expand=TRUE)
-    txt <- gWidgets::glabel("", expand=TRUE, container=gp)
-
-  }
-
-  if(RPostgres::dbExistsTable(conn, tableName)){
-
-    if ( config$isgraphic ){
-
-      txt <- gWidgets::glabel(base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep="" ), expand=TRUE, container=gp)
-      Sys.sleep(3)    
-      gWidgets::gmessage("Check Postgresql table.")
-
-    }
-
-    msg <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\n", sep="" )
+    msg      <- base::paste("Done -Table ", tableName, " exists.\t\t\t\t\n", sep="" )
     cat(msg)
-    RPostgres::dbDisconnect(conn)
+    RPostgreSQL::dbDisconnect(conn)
     return(tableName)
 
-  }else{
+  } else {
     
     if ( config$isgraphic ){
 
-      msg  <- base::paste("Creating ", tableName, " table of ", type , sep="")    
+      msg    <- base::paste("Creating ", tableName, " table of ", type , sep="")    
       gWidgets::svalue(txt) <- msg
       Sys.sleep(3)
+    }# endIF
 
-    }
     #name_and_date.df  <- stations$data[,c("id","mindate","maxdate","longitude","latitude")]
     coord <- coor_ws[,c("longitude","latitude")]
 
@@ -109,18 +89,14 @@ df_2_pgdb <- function(ghcnd, geoid, type, coor_ws, sufix){
     spdf$mindate<- coor_ws$mindate
     spdf$maxdate<- coor_ws$maxdate
 
-    OGRstring<- base::paste("PG:dbname=",config$dbname," user=",config$dbuser," password=",config$dbpwd, " host=",config$dbhost," port=",config$dbport,sep = "")
+    rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
 
-    #Need handling error
-    coord_error<- rgdal::writeOGR(spdf,OGRstring,layer_options = "geometry_name=geom", tableName, driver=driver, overwrite_layer = 'TRUE', verbose =TRUE)
+    print("Finished. Check Postgresql table!")
 
-    if(config$isgraphic){ gWidgets::gmessage("Finished. Check Postgresql table!") }
-    else{ print("Finished. Check Postgresql table!")  }
+  }# endIF/ELSE
 
-  }#endIF/ELSE
-
-  RPostgres::dbDisconnect(conn)
-  #RPostgres::dbUnloadDriver(drv)   
+  RPostgreSQL::dbDisconnect(conn)
+  RPostgreSQL::dbUnloadDriver(drv)
   return(tableName)
 
 }
