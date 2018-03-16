@@ -1,27 +1,26 @@
 Package: ws2pgdb
 Title: Retrieves, manipulates, and stores data from NOAA. Uses location of weather stations to create a Voronoi tessellation
-Version: 0.3.0
-Authors@R: person("Angel", "Bravo", email = "angel.bravo@unt.edu", role =c("aut", "cre"))
+Version: 0.4.0
+Authors@R: person("Angel", "Bravo", email = "angel.bravo@miamioh.edu", role =c("aut", "cre"))
 Author: Angel Bravo  [aut, cre]
-Maintainer: Angel Bravo <angel.bravo@unt.edu>
+Maintainer: Angel Bravo <angel.bravo@miamioh.edu>
 Description: The 0.2.0 version uses the rstats-db/RPostgres instead of the well-known RPostgreSQL for client-server Postgres communication. This package starred as many others out there, as a large collection of functions in a source file. It became hard to look through the file and find the right function for my research towards the completion of my disseration. Functions will be described in detail in the help section, but the main theme is to automatically retrieve, filter, store, information from the NOAA data werahouse. Not surprises, I used several packages available in R CRAN and github repository like the 'rnoaa'. Several functions automatically store acquired information in a local or remote Postgres database server. Other functions assume that there exist geographic information tables at the Postgres database (check the help for more details). This package is an ongoing work, do not expect a free-from-bugs software. For instance, there are not handler for all the procedures that invoke remote information. I intend to add them soon but NOAA is usually online a good time of the year. Prone to error should happen more often on the client side. Providing the name of a non-existing table or using an invalid user name or password to write into the database( all that needs handlers for cleaner returns ), so that's it,  Salu2. 
 Depends: R (>= 3.2.0)
 License: GPL-3
 LazyData: true
 Imports: 
-	gWidgets,
 	hash,
 	lubridate,
 	RcppOctave,
-	rgdal,
 	rnoaa,
+	rpostgis,
 	RPostgres,
+	RPostgreSQL,
 	sp,
         yaml
 Suggests: 
 	deldir,
 	devtools,
-	gWidgetstcltk,	
 	MASS,
 	zoo,
     Rcpp,
