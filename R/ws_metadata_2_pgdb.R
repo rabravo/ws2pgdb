@@ -31,16 +31,13 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
 
   drv     <- "PostgreSQL"
   conn	  <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-  #drv    <- RPostgres::Postgres()
-  #conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-
 
   if ( as.integer(geoid) < 100) {
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
     res   <- RPostgreSQL::dbSendQuery(conn, q1)
     state <- data.frame(RPostgreSQL::fetch(res))
-    RPostgres::dbClearResult(res)
+    RPostgreSQL::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid,"_ws_metadata_", sep="")
 
   } else {
@@ -66,7 +63,7 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
 
     msg <- base::paste("Done - Table ", tableName, " exists.\t\t\t\t\n", sep="")
     cat(msg)
-    RPostgres::dbDisconnect(conn)
+    RPostgreSQL::dbDisconnect(conn)
     return(tableName)    
 
   } else {
