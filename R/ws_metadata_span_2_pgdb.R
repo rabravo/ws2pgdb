@@ -12,18 +12,18 @@
 #' in the body of the function. It starts with the current year and the span variable defines
 #' the threshold for the algorithm to search for the answers. 
 #'
-#' @keywords weather station, RPostgres, county, estate. span
+#' @keywords weather station, RPostgreSQL, county, estate. span
 #' @param geoid  FIPS number from census tables (tiger files)
 #' @param type   Variable under investigation i.e. TMAX, TMIN, PRCP
 #' @param stations The universe of stations from the rnoaa API from where the new subset will be computed.
 #' @param span This is the threshold used to limit the search .
 #' @return Returns the name of the new table of the subset of weather stations with intersecting data 
 #' @examples
-#' ghcnd <- 'GHCND'
-#' geoid <- '12087'
-#' type  <- 'TMAX'
+#' ghcnd    <- 'GHCND'
+#' geoid    <- '12087'
+#' type     <- 'TMAX'
 #' stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span <- '2'
+#' span     <- '2'
 #' ws_metadata_span_2_pgdb( geoid, type, stations, span) 
 #' @note Remember that all_coor_ws() returns a set of stations.
 #' @export
@@ -32,28 +32,28 @@ ws_metadata_span_2_pgdb <- function( geoid, type, stations, span){
 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
-  drv    <- RPostgres::Postgres()
-  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  drv    <- "PostgreSQL"
+  conn   <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
   if ( as.integer(geoid) < 100) {
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q1)
-    state <- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q1)
+    state <- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid,"_ws_metadata_span_",span,"_", sep="")
 
   } else {
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q2)
-    county<- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q2)
+    county<- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
 
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
-    res   <- RPostgres::dbSendQuery(conn, q3)
-    state <- RPostgres::dbFetch(res)
-    RPostgres::dbClearResult(res)
+    res   <- RPostgreSQL::dbSendQuery(conn, q3)
+    state <- RPostgreSQL::fetch(res)
+    RPostgreSQL::dbClearResult(res)
     tableName<- base::paste(state, "_",county,"_",geoid,"_ws_metadata_span_",span,"_", sep="")
 
   }
@@ -63,12 +63,11 @@ ws_metadata_span_2_pgdb <- function( geoid, type, stations, span){
   tableName <- base::paste( varTable, type, sep="")      
   tableName <- gsub(" ", "_", tableName)
   
-  if (RPostgres::dbExistsTable(conn, tableName)) {
+  if (RPostgreSQL::dbExistsTable(conn, tableName)) {
 
     msg <- base::paste("\nDone - Table ", tableName, " exists.\t\t\t\t\t\n", sep="")
     cat(msg)
-    RPostgres::dbDisconnect(conn)
-
+    RPostgreSQL::dbDisconnect(conn)
     return(tableName)    
 
   } else {
@@ -115,7 +114,7 @@ ws_metadata_span_2_pgdb <- function( geoid, type, stations, span){
    
   }# endIF/ELSE
   
-  RPostgres::dbDisconnect(conn)
+  RPostgreSQL::dbDisconnect(conn)
 
   return(tableName)
 }# endFUNCTION
