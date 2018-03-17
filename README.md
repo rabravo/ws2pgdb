@@ -159,9 +159,9 @@ CREATE OR REPLACE FUNCTION public.r_create_county_info(text, text, text)
   RETURNS text AS
 $BODY$
   #i.e. SELECT r_create_county_info('12087', 'TMAX', '10') 
-  geoid <- arg1
-  type  <- arg2
-  span  <- arg3
+  geoid <- '12087'
+  type  <- 'TMAX'
+  span  <- '5'
   ghcnd <- 'GHCND'
 
 
@@ -201,11 +201,7 @@ $BODY$
   midasExist     <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)  
 
-  if( midasExist ){
-    print("Exists!");
-  }else{
-
-    q1 <- base::paste("\
+  q1 <- base::paste("\
     with\
       tractce As(\
         SELECT tract.geoid10 as geoid, tract.the_geom as geom, ST_MakeLine(ST_Centroid( tract.the_geom ), coord.geom ) as geomLine, ST_Length( ST_MakeLine(ST_Centroid( tract.the_geom ), coord.geom ) ) as dist, coord.name, ST_Centroid( tract.the_geom ) as centroid FROM ", tigertableName, " tract, ", ws_metadata, " coord\
@@ -219,8 +215,11 @@ $BODY$
       cluster_ws As(\
         SELECT name, ST_MULTI( ST_UNION(poly) ) FROM line2Hub GROUP BY name\
       )\
-      SELECT * INTO ", table_cluster , " FROM cluster_ws ",  sep="")
+      SELECT * INTO ", table_cluster, " FROM cluster_ws ",  sep="")
 
+  if ( midasExist ) {
+    print("Exists!");
+  } else {
     res        <- RPostgres::dbSendQuery(conn, q1)
     q1_out     <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)      
@@ -229,13 +228,9 @@ $BODY$
   res               <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", midas_pop_clustered_by_nearest_ws))
   midasClusterExist <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)        
-  
-  if( midasClusterExist ){
-  
-    print("Exists!");
-    
-  }else{
-  
+
+#----------Prepared Query / May be executed or not --------------------------
+
     q2 <- base::paste("
     with\
       tractce As(\
@@ -261,6 +256,12 @@ $BODY$
       )\
       SELECT * INTO ", midas_pop_clustered_by_nearest_ws, " FROM cluster_pop ORDER BY ws_id", sep="")
 
+  if ( midasClusterExist ) {
+  
+    print("Exists!");
+    
+  } else {
+  
     res      <- RPostgres::dbSendQuery(conn, q2)
     q2_out   <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
@@ -282,56 +283,55 @@ CREATE OR REPLACE FUNCTION public.r_create_midas_synth_hh_table(text)
 $BODY$
 #i.e. SELECT r_create_midas_synth_hh_table('12087')
 
-pwd     <- base::Sys.getenv("PWD")
-url     <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
-geoid       <- arg1
+  pwd     <- base::Sys.getenv("PWD")
+  url     <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
+  geoid       <- arg1
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
 
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
-pre  <- as.character(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)    
+  res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+  pre  <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)    
 
-
-tableName  <- paste(pre,"midas_synth_hh", sep="")
-res        <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_exists('%1$s')", tableName) )
-tableExist <- as.integer(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-if ( tableExist ){
-  return(tableName)
-}else{
-
-  res   <- RPostgres::dbSendQuery(conn, sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) )
-  debug <- as.integer(RPostgres::dbFetch(res))
+  tableName  <- paste(pre,"midas_synth_hh", sep="")
+  res        <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_exists('%1$s')", tableName) )
+  tableExist <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
-  print(debug)
 
-  file      <- base::paste("2010_ver1_",geoid,sep="")
-  pfile     <- base::paste(pwd,"/","2010_ver1_",geoid,sep="")
-  extractedFile <- base::paste(file, "_synth_households.txt", sep="")
-  updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
-  zipFile   <- base::paste(pfile,".zip", sep="")
-  download  <- base::paste(url, file, ".zip",sep="")
-  downloader::download( download , dest=zipFile, mode="wb")
-  utils::unzip(paste(pfile,".zip",sep=""), file=extractedFile) 
-  input     <- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
-  out       <- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
-  utils::write.csv(out,file=updatedFile, row.names=FALSE)
+  if ( tableExist ) {
+    return(tableName)
+  } else {
 
-  res   <- RPostgres::dbSendQuery(conn, sprintf( "COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile) )
-  err <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)  
+    res   <- RPostgres::dbSendQuery(conn, sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) )
+    debug <- as.integer(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+    print(debug)
+
+    file      <- base::paste("2010_ver1_",geoid,sep="")
+    pfile     <- base::paste(pwd,"/","2010_ver1_",geoid,sep="")
+    extractedFile <- base::paste(file, "_synth_households.txt", sep="")
+    updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
+    zipFile   <- base::paste(pfile,".zip", sep="")
+    download  <- base::paste(url, file, ".zip",sep="")
+    downloader::download( download , dest=zipFile, mode="wb")
+    utils::unzip(paste(pfile,".zip",sep=""), file=extractedFile) 
+    input     <- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
+    out       <- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
+    utils::write.csv(out,file=updatedFile, row.names=FALSE)
+
+    res   <- RPostgres::dbSendQuery(conn, sprintf( "COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile) )
+    err <- as.character(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)  
     
-  q5 <- paste("rm ",zipFile," ",updatedFile," ",extractedFile,sep="")
-  system(q5)
+    q5 <- paste("rm ",zipFile," ",updatedFile," ",extractedFile,sep="")
+    system(q5)
   
-  return(tableName)
-}
+    return(tableName)
+  }
 $BODY$
   LANGUAGE plr;
 
@@ -376,62 +376,53 @@ CREATE OR REPLACE FUNCTION public.r_create_tiger_tracts_table(text)
   RETURNS text AS
 $BODY$
 
-pgfile <- base::paste(Sys.getenv("PWD"), "/","pg_config.yml", sep="")
-print(pgfile)
-pwd    <- base::Sys.getenv("PWD")
-print(pwd)
-config <- yaml::yaml.load_file( pgfile )
-geoid  <- arg1
+  pgfile <- base::paste(Sys.getenv("PWD"), "/","pg_config.yml", sep="")
+  print(pgfile)
+  pwd    <- base::Sys.getenv("PWD")
+  print(pwd)
+  config <- yaml::yaml.load_file( pgfile )
+  geoid  <- arg1
 
-#To override auth, provide your passwd via the .pgpass (see postgresql documentation)
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  # To override auth, provide your passwd via the .pgpass (see postgresql documentation)
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
-prefix <- base::as.character(RPostgres::dbFetch(res))
-pretableName <- base::paste(prefix, "tiger_tracts",sep="")
-RPostgres::dbClearResult(res)
-
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", pretableName) )
-tableExist <- base::as.integer( RPostgres::dbFetch(res) )
-RPostgres::dbClearResult(res)
-
-if ( tableExist ){
-
-  return(pretableName)
-
-}else{
-
-  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_fips_2_state('%1$s')", geoid) )
-  state  <- base::as.character(RPostgres::dbFetch(res))
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
+  prefix <- base::as.character(RPostgres::dbFetch(res))
+  pretableName <- base::paste(prefix, "tiger_tracts",sep="")
   RPostgres::dbClearResult(res)
 
-  state  <- gsub(" ", "_", state)
-  ftp    <- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
-  url    <- base::paste(ftp, substr(geoid, 1, 2), "_", state, "/", geoid, "/", sep="")
-  
-  file   <- base::paste("tl_2010_",geoid,"_tract10",sep="")
-  tableName  <- base::paste(file, sep="")
-  ext    <- ".zip"
-  
-  pfile  <- base::paste(pwd,"/",file,sep="")
-  download   <- base::paste(url, file, ext, sep="")
-  zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
-  downloader::download( download , dest=zipFile, mode="wb")
-  dir    <- base::paste(pwd,"/","temp",sep="")
-  utils::unzip(zipFile, overwrite = 'TRUE', exdir=dir)
-  ext    <-".shp"
-  
-  q5     <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
-  system(q5)
-  
-  q6     <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
-  system(q6)
-  
-  q7     <- paste("rm ", pwd, "/", "temp/*",sep="")
-  system(q7)
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", pretableName) )
+  tableExist <- base::as.integer( RPostgres::dbFetch(res) )
+  RPostgres::dbClearResult(res)
 
-  return(pretableName)
+  if ( tableExist ) {
+    return(pretableName)
+  } else {
+
+    res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_fips_2_state('%1$s')", geoid) )
+    state  <- base::as.character(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+    state  <- gsub(" ", "_", state)
+    ftp    <- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
+    url    <- base::paste(ftp, substr(geoid, 1, 2), "_", state, "/", geoid, "/", sep="")  
+    file   <- base::paste("tl_2010_",geoid,"_tract10",sep="")
+    tableName  <- base::paste(file, sep="")
+    ext    <- ".zip"  
+    pfile  <- base::paste(pwd,"/",file,sep="")
+    download   <- base::paste(url, file, ext, sep="")
+    zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
+    downloader::download( download , dest=zipFile, mode="wb")
+    dir    <- base::paste(pwd,"/","temp",sep="")
+    utils::unzip(zipFile, overwrite = 'TRUE', exdir=dir)
+    ext<-".shp"
+    q5 <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
+    system(q5)
+    q6 <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
+    system(q6)  
+    q7 <- paste("rm ", pwd, "/", "temp/*", sep = "")
+    system(q7)
+    return(pretableName)
 }
 
 $BODY$
@@ -442,15 +433,15 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_gen_data_avg_span_2_pgdb(text, text, text, text)
   RETURNS text AS
 $BODY$ 
-# i.e. SELECT r_gen_data_avg_span_2_pgdb('GHCND','12087','TMAX','10')
-ghcnd <- arg1
-geoid <- arg2
-type  <- arg3
-stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
-span  <- arg4
-ws_metadata  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
-ws_data <- ws2pgdb::ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
-return(ws_data)
+  # i.e. SELECT r_gen_data_avg_span_2_pgdb('GHCND','12087','TMAX','10')
+  ghcnd <- arg1
+  geoid <- arg2
+  type  <- arg3
+  stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
+  span  <- arg4
+  ws_metadata  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+  ws_data <- ws2pgdb::ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
+  return(ws_data)
 $BODY$
   LANGUAGE plr;
 
@@ -458,15 +449,15 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_gen_data_na_span_2_pgdb(text, text, text, text)
   RETURNS text AS
 $BODY$ 
-# i.e. SELECT r_gen_data_na_span_2_pgdb('GHCND','12087','TMAX','10')
-ghcnd <- arg1
-geoid <- arg2
-type  <- arg3
-stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
-span  <- arg4
-ws_metadata  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
-ws_data <- ws2pgdb::ws_data_na_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
-return(ws_data)
+  # i.e. SELECT r_gen_data_na_span_2_pgdb('GHCND','12087','TMAX','10')
+  ghcnd <- arg1
+  geoid <- arg2
+  type  <- arg3
+  stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
+  span  <- arg4
+  ws_metadata  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+  ws_data <- ws2pgdb::ws_data_na_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
+  return(ws_data)
 $BODY$
   LANGUAGE plr;
 
@@ -475,15 +466,15 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_gen_data_span_avg_2_pgdb(text, text, text, text)
   RETURNS text AS
 $BODY$ 
-# i.e. SELECT r_gen_data_span_avg_2_pgdb('GHCND','12087','TMAX','10')
-ghcnd <- arg1
-geoid <- arg2
-type  <- arg3
-stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
-span  <- arg4
-stations  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
-ws_metadata <- ws2pgdb::ws_data_span_avg_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
-return(ws_metadata)
+  # i.e. SELECT r_gen_data_span_avg_2_pgdb('GHCND','12087','TMAX','10')
+  ghcnd <- arg1
+  geoid <- arg2
+  type  <- arg3
+  stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
+  span  <- arg4
+  stations  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+  ws_metadata <- ws2pgdb::ws_data_span_avg_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
+  return(ws_metadata)
 $BODY$
   LANGUAGE plr;
 
@@ -493,15 +484,15 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_gen_data_span_na_2_pgdb(text, text, text, text)
   RETURNS text AS
 $BODY$ 
-# i.e. SELECT r_gen_data_span_na_2_pgdb('GHCND','12087','TMAX','10')
-ghcnd <- arg1
-geoid <- arg2
-type  <- arg3
-stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
-span  <- arg4
-stations  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
-ws_metadata <- ws2pgdb::ws_data_span_na_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
-return(ws_metadata)
+  # i.e. SELECT r_gen_data_span_na_2_pgdb('GHCND','12087','TMAX','10')
+  ghcnd <- arg1
+  geoid <- arg2
+  type  <- arg3
+  stations <- as.data.frame( ws2pgdb::all_coor_ws( ghcnd, geoid, type) )
+  span  <- arg4
+  stations  <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+  ws_metadata <- ws2pgdb::ws_data_span_na_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
+  return(ws_metadata)
 $BODY$
   LANGUAGE plr;
 
@@ -511,13 +502,12 @@ CREATE OR REPLACE FUNCTION public.r_gen_model(text, text, text, text)
 $BODY$
 #i.e. SELECT r_gen_model('12087','TMAX','10','dengue')
 
-library(RcppOctave)
-geoid   <- arg1
-type    <- arg2
-span    <- arg3
-disease <- arg4
-
-return(ws2pgdb::stretch_delay_latent_period(geoid, type, span, disease))
+  library(RcppOctave)
+  geoid   <- arg1
+  type    <- arg2
+  span    <- arg3
+  disease <- arg4
+  return(ws2pgdb::stretch_delay_latent_period(geoid, type, span, disease))
 
 $BODY$
   LANGUAGE plr;
@@ -538,38 +528,37 @@ CREATE OR REPLACE FUNCTION public.r_get_population_size(text)
   RETURNS integer AS
 $BODY$ 
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-geoid  <- arg1
-q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-res    <- RPostgres::dbSendQuery(conn, q1)
-nameTable  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws" ,sep="")
-q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
-exists  <- as.integer(RPostgres::dbFetch(res))
-
-if ( exists ){
-  q3     <- base::paste("SELECT SUM(hh) FROM ", midasTable, sep="")
-  res    <- RPostgres::dbSendQuery(conn, q3)
-  total  <- data.frame(RPostgres::dbFetch(res))
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  geoid  <- arg1
+  q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
+  res    <- RPostgres::dbSendQuery(conn, q1)
+  nameTable  <- data.frame(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
-}else{
-  midasTable    <- base::paste(nameTable, "midas_synth_hh" ,sep="")
-  q3     <- base::paste("SELECT SUM(hh_size) FROM ", midasTable, sep="")
-  res    <- RPostgres::dbSendQuery(conn, q3)
-  total  <- data.frame(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)
-  #return(base::paste(midasTable, " does not exists ,sep="") )
-}
+  midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws" ,sep="")
+  q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
+  res    <- RPostgres::dbSendQuery(conn, q2)
+  exists  <- as.integer(RPostgres::dbFetch(res))
 
-RPostgres::dbDisconnect(conn)
-  return(total)
+  if ( exists ) {
+    q3     <- base::paste("SELECT SUM(hh) FROM ", midasTable, sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    total  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+  } else {
+    midasTable    <- base::paste(nameTable, "midas_synth_hh" ,sep="")
+    q3     <- base::paste("SELECT SUM(hh_size) FROM ", midasTable, sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    total  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+    #return(base::paste(midasTable, " does not exists ,sep="") )
+  }
+
+  RPostgres::dbDisconnect(conn)
+    return(total)
 $BODY$
   LANGUAGE plr;
 
@@ -582,53 +571,50 @@ CREATE OR REPLACE FUNCTION public.r_get_pos(text, text)
   RETURNS SETOF double precision AS
 $BODY$ 
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
 
-#geoid is the fips number. This function only accept fips for counties (5 digits)
-geoid <- arg1
-pos   <- arg2
+  # geoid is the fips number. This function only accept fips for counties (5 digits)
+  geoid <- arg1
+  pos   <- arg2
 
-#Weathe variable
-type  <- 'TMAX'
-#Look-back in time
-span  <- '3'
+  # Weathe variable
+  type  <- 'TMAX'
+  # Look-back in time
+  span  <- '3'
 
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-if ( pos == 'lat'){
-
-  q1   <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-  res  <-RPostgres::dbSendQuery(conn, q1)
-  tableName  <- data.frame(RPostgres::dbFetch(res))
-  type <- tolower(type)
-  tableName  <- paste(tableName,"ws_metadata_span_",span,"_",type,sep="")
-  RPostgres::dbClearResult(res)
+  if ( pos == 'lat') {
+    q1   <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
+    res  <-RPostgres::dbSendQuery(conn, q1)
+    tableName  <- data.frame(RPostgres::dbFetch(res))
+    type <- tolower(type)
+    tableName  <- paste(tableName,"ws_metadata_span_",span,"_",type,sep="")
+    RPostgres::dbClearResult(res)
   
-  q2   <- base::paste("SELECT ST_Y(lat.geom) FROM ", tableName, " as lat", sep="")
-  res  <-RPostgres::dbSendQuery(conn, q2)
-  coord  <- data.frame(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)
-}
-if ( pos == 'lon'){
+    q2   <- base::paste("SELECT ST_Y(lat.geom) FROM ", tableName, " as lat", sep="")
+    res  <-RPostgres::dbSendQuery(conn, q2)
+    coord  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+  }
+  if ( pos == 'lon') {
+    q1   <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
+    res  <-RPostgres::dbSendQuery(conn, q1)
+    tableName  <- data.frame(RPostgres::dbFetch(res))
+    type <- tolower(type)
+    tableName  <- paste(tableName,"ws_metadata_span_",span,"_",type,sep="")
+    RPostgres::dbClearResult(res)
 
-  q1   <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-  res  <-RPostgres::dbSendQuery(conn, q1)
-  tableName  <- data.frame(RPostgres::dbFetch(res))
-  type <- tolower(type)
-  tableName  <- paste(tableName,"ws_metadata_span_",span,"_",type,sep="")
-  RPostgres::dbClearResult(res)
-
-  q2   <- base::paste("SELECT ST_X(lon.geom) FROM ", tableName, " as lon", sep="")
-  res  <-RPostgres::dbSendQuery(conn, q2)
-  coord  <- data.frame(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)
-}
-RPostgres::dbDisconnect(conn)
-
-return(coord)
+    q2   <- base::paste("SELECT ST_X(lon.geom) FROM ", tableName, " as lon", sep="")
+    res  <-RPostgres::dbSendQuery(conn, q2)
+    coord  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+  }
+  RPostgres::dbDisconnect(conn)
+  return(coord)
 
 $BODY$
   LANGUAGE plr;
@@ -649,43 +635,42 @@ CREATE OR REPLACE FUNCTION public.r_get_tract_size(text, text)
   RETURNS integer AS
 $BODY$ 
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  geoid  <- as.character(arg1)
+  wsNum  <- as.integer(arg2)
+  if (wsNum == 0) {
+    return(0)
+  }
 
-geoid  <- as.character(arg1)
-wsNum  <- as.integer(arg2)
-if (wsNum == 0){
-  return(0)
-}
-
-q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-res    <- RPostgres::dbSendQuery(conn, q1)
-nameTable  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws " ,sep="")
-q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
-exists  <- as.integer(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-if ( exists ){
-  #Fail badly if table entry does not exist
-  wsNum  <- wsNum - 1
-  str1   <- base::paste("SELECT ws_id FROM ", midasTable," LIMIT 1 OFFSET ", wsNum , sep="")
-  res    <- RPostgres::dbSendQuery(conn,str1)
-  rowNum  <- data.frame(RPostgres::dbFetch(res))
-
-  q3     <- base::paste("SELECT hh FROM ", midasTable,"WHERE ws_id = ",rowNum, sep="")
-  res    <- RPostgres::dbSendQuery(conn, q3)
-  total  <- data.frame(RPostgres::dbFetch(res))
+  q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
+  res    <- RPostgres::dbSendQuery(conn, q1)
+  nameTable  <- data.frame(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
-}else{
-  total <- 0
-}
+
+  midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws " ,sep="")
+  q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
+  res    <- RPostgres::dbSendQuery(conn, q2)
+  exists  <- as.integer(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+
+  if ( exists ) {
+    # Fail badly if table entry does not exist
+    wsNum  <- wsNum - 1
+    str1   <- base::paste("SELECT ws_id FROM ", midasTable," LIMIT 1 OFFSET ", wsNum , sep="")
+    res    <- RPostgres::dbSendQuery(conn,str1)
+    rowNum  <- data.frame(RPostgres::dbFetch(res))
+
+    q3     <- base::paste("SELECT hh FROM ", midasTable,"WHERE ws_id = ",rowNum, sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    total  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+  } else {
+    total <- 0
+  }
   
   RPostgres::dbDisconnect(conn)
   return(total)
@@ -700,31 +685,31 @@ CREATE OR REPLACE FUNCTION public.r_model_colname(text, text, text, text)
 $BODY$
 # i.e. SELECT r_model_colname('12087','10','dengue','4')
 
-geoid  <- as.character(arg1)
-span   <- as.character(arg2)
-disease<- arg3
-wsNum  <- as.integer(arg4)
+  geoid  <- as.character(arg1)
+  span   <- as.character(arg2)
+  disease<- arg3
+  wsNum  <- as.integer(arg4)
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
-prefix  <- base::as.character(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
+  prefix  <- base::as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax_",disease,sep="")
+  t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax_",disease,sep="")
 
-res      <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
-wsModel  <- base::data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res      <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
+  wsModel  <- base::data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-wsModel  <- wsModel[1:length(wsModel[,1]),]
-ws       <- base::paste("\"",wsModel[wsNum],"\"",sep="")
+  wsModel  <- wsModel[1:length(wsModel[,1]),]
+  ws       <- base::paste("\"",wsModel[wsNum],"\"",sep="")
 
-return(ws)
+  return(ws)
 
 $BODY$
   LANGUAGE plr; 
@@ -734,40 +719,40 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_model_values(text, text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_model_values('12087','10','dengue','4','TMAX')
-# i.e. SELECT r_model_values('48061','10','malaria','4','TMIN')
+  # i.e. SELECT r_model_values('12087','10','dengue','4','TMAX')
+  # i.e. SELECT r_model_values('48061','10','malaria','4','TMIN')
 
-geoid  <- base::as.character(arg1)
-span   <- base::as.character(arg2)
-disease<- base::as.character(arg3)
-wsNum  <- base::as.integer(arg4)
-type   <- base::as.character(arg5)
-type   <- base::tolower(type)
+  geoid  <- base::as.character(arg1)
+  span   <- base::as.character(arg2)
+  disease<- base::as.character(arg3)
+  wsNum  <- base::as.integer(arg4)
+  type   <- base::as.character(arg5)
+  type   <- base::tolower(type)
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
-prefix  <- base::as.character(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid))
+  prefix  <- base::as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,"_",disease,sep="")
+  t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,"_",disease,sep="")
 
-res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
-wsModel <- base::data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1))
+  wsModel <- base::data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-wsModel <- wsModel[1:length(wsModel[,1]),]
-ws      <- base::paste("\"",wsModel[wsNum],"\"",sep="")
+  wsModel <- wsModel[1:length(wsModel[,1]),]
+  ws      <- base::paste("\"",wsModel[wsNum],"\"",sep="")
 
-res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
-wsValue  <- base::data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-return(wsValue)
+  res     <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
+  wsValue  <- base::data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  return(wsValue)
+  
 $BODY$
   LANGUAGE plr;
 
@@ -777,19 +762,19 @@ CREATE OR REPLACE FUNCTION public.r_name_2_fips(text, text)
   RETURNS text AS
 $BODY$ 
 
-#First arguments needs the Official name that is it has to include Capitalization
-#Second arguments can take the value of 'st' for state, or 'co' for county
-#Return one or more fips 
-#i.e. SELECT r_name_2_fips('Monroe', 'co')
+  # First arguments needs the Official name that is it has to include Capitalization
+  # Second arguments can take the value of 'st' for state, or 'co' for county
+  # Return one or more fips 
+  # i.e. SELECT r_name_2_fips('Monroe', 'co')
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-name   <- arg1
-key    <- arg2
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  name   <- arg1
+  key    <- arg2
 
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
   if( key == 'st'){
 
@@ -817,23 +802,22 @@ CREATE OR REPLACE FUNCTION public.r_fips_2_state(text)
   RETURNS text AS
 $BODY$ 
 
-#i.e. SELECT r_fips_2_state('12') or SELECT r_fips_2_state('12087')
-#out: 'Florida'
+  # i.e. SELECT r_fips_2_state('12') or SELECT r_fips_2_state('12087')
+  # out: 'Florida'
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-geoid   <- arg1
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  geoid   <- arg1
 
 
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res  <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", substr(geoid, 1, 2) ) )
-nom  <- RPostgres::dbFetch(res)
-RPostgres::dbClearResult(res)
-
-return(nom)
+  res  <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", substr(geoid, 1, 2) ) )
+  nom  <- RPostgres::dbFetch(res)
+  RPostgres::dbClearResult(res)
+  return(nom)
 
 $BODY$
   LANGUAGE plr;
@@ -846,37 +830,37 @@ CREATE OR REPLACE FUNCTION public.r_read_population_size(text)
   RETURNS integer AS
 $BODY$ 
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-geoid  <- arg1
-q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
-res    <- RPostgres::dbSendQuery(conn, q1)
-nameTable  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws" ,sep="")
-q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
-res    <- RPostgres::dbSendQuery(conn, q2)
-exists  <- as.integer(RPostgres::dbFetch(res))
-
-if ( exists ){
-  q3     <- base::paste("SELECT SUM(hh) FROM ", midasTable, sep="")
-  res    <- RPostgres::dbSendQuery(conn, q3)
-  total  <- data.frame(RPostgres::dbFetch(res))
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  geoid  <- arg1
+  q1     <- base::paste("SELECT r_table_prefix('",geoid,"')", sep="")
+  res    <- RPostgres::dbSendQuery(conn, q1)
+  nameTable  <- data.frame(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
-}else{
-  midasTable    <- base::paste(nameTable, "midas_synth_hh" ,sep="")
-  q3     <- base::paste("SELECT SUM(hh_size) FROM ", midasTable, sep="")
-  res    <- RPostgres::dbSendQuery(conn, q3)
-  total  <- data.frame(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)
-  #return(base::paste(midasTable, " does not exists ,sep="") )
-}
 
-RPostgres::dbDisconnect(conn)
+  midasTable    <- base::paste(nameTable, "midas_pop_clustered_by_nearest_ws" ,sep="")
+  q2     <- base::paste("SELECT r_table_exists('", midasTable,"')",sep="")
+  res    <- RPostgres::dbSendQuery(conn, q2)
+  exists  <- as.integer(RPostgres::dbFetch(res))
+
+  if ( exists ) {
+    q3     <- base::paste("SELECT SUM(hh) FROM ", midasTable, sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    total  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+  } else {
+    midasTable    <- base::paste(nameTable, "midas_synth_hh" ,sep="")
+    q3     <- base::paste("SELECT SUM(hh_size) FROM ", midasTable, sep="")
+    res    <- RPostgres::dbSendQuery(conn, q3)
+    total  <- data.frame(RPostgres::dbFetch(res))
+    RPostgres::dbClearResult(res)
+    # return(base::paste(midasTable, " does not exists ,sep="") )
+  }
+
+  RPostgres::dbDisconnect(conn)
   return(total)
 $BODY$
   LANGUAGE plr;
@@ -886,28 +870,28 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_read_ws(text, text, text)
   RETURNS SETOF text AS
 $BODY$ 
-# SELECT r_read_ws('12087', 'TMAX', '10')
-geoid <- arg1
-type  <- arg2
-span  <- arg3
+  # SELECT r_read_ws('12087', 'TMAX', '10')
+  geoid <- arg1
+  type  <- arg2
+  span  <- arg3
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  driver <- "PostgreSQL"
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
-nameTable  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+  nameTable  <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-metainfoTable    <- base::paste(nameTable, "ws_metadata_span_",span,"_",type ,sep="")
+  metainfoTable    <- base::paste(nameTable, "ws_metadata_span_",span,"_",type ,sep="")
 
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT name FROM %1$s", metainfoTable) )
-ws  <- data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT name FROM %1$s", metainfoTable) )
+  ws  <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-RPostgres::dbDisconnect(conn)
+  RPostgres::dbDisconnect(conn)
   return(ws)
 
 $BODY$
@@ -939,16 +923,16 @@ CREATE OR REPLACE FUNCTION public.r_table_prefix(text)
   RETURNS text AS
 $BODY$ 
 
-#i.e. SELECT r_table_prefix('12087')
+  # i.e. SELECT r_table_prefix('12087')
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-geoid  <- arg1
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  geoid  <- arg1
 
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-  if( as.integer(geoid) < 100){
+  if ( as.integer(geoid) < 100) {
     
     res   <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_state_20m where GEOID='%1$s'", geoid))
     state <- RPostgres::dbFetch(res)
@@ -956,7 +940,7 @@ conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, db
     
     tableName <- base::paste(state,"_",geoid,"_",sep="")
 
-  }else{
+  } else {
 
     res   <- RPostgres::dbSendQuery(conn, sprintf("select NAME from cb_2013_us_county_20m where GEOID='%1$s'", geoid))
     county<- RPostgres::dbFetch(res)
@@ -972,7 +956,6 @@ conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, db
   varTable           <- tolower( tableName  )
   tableName          <-  gsub(" ", "_", varTable)
   tableName          <-  gsub("-", "_", varTable)
-
   return(tableName)
 
 $BODY$
@@ -1005,17 +988,17 @@ CREATE TYPE r_voronoi_type AS (id integer, polygon geometry);
 CREATE OR REPLACE FUNCTION public.r_voronoi(text, text, text)
   RETURNS SETOF r_voronoi_type AS
 $BODY$
-library(deldir)
-# select the point x/y coordinates into a data frame
-points <- pg.spi.exec(
-sprintf(
-"SELECT ST_X(%2$s) AS x, ST_Y(%2$s) AS y FROM %1$s;",
-arg1,
-arg2
-)
-)
-# calculate an appropriate buffer distance (~10%):
-# Update: (~50%) for further operations with in POSTGRESQL
+  library(deldir)
+  # select the point x/y coordinates into a data frame
+  points <- pg.spi.exec(
+    sprintf(
+    "SELECT ST_X(%2$s) AS x, ST_Y(%2$s) AS y FROM %1$s;",
+    arg1,
+    arg2
+    )
+  )
+  # calculate an appropriate buffer distance (~10%):
+  # Update: (~50%) for further operations with in POSTGRESQL
 buffer_distance = (
 (
 abs(max(points$x) - min(points$x)) +
@@ -1031,11 +1014,11 @@ arg2,
 buffer_distance
 )
 )
-# the following use of deldir uses high precision and digits to prevent
-# slivers between the output polygons, and uses a relatively large bounding
-# box with four dummy points included to ensure that points in the
-# peripheral areas of the dataset are appropriately enveloped by their
-# corresponding polygons:
+  # the following use of deldir uses high precision and digits to prevent
+  # slivers between the output polygons, and uses a relatively large bounding
+  # box with four dummy points included to ensure that points in the
+  # peripheral areas of the dataset are appropriately enveloped by their
+  # corresponding polygons:
 voro = deldir(
 points$x,
 points$y,
@@ -1071,11 +1054,11 @@ curpoly,
 tile$x[[1]],
 tile$y[[1]]
 )
-# this bit will find the original point that corresponds to the current
-# polygon, along with its id and the SRID used for the point geometry
-# (presumably this is the same for all points)...this will also filter
-# out the extra polygons created for the four dummy points, as they
-# will not return a result from this query:
+  # this bit will find the original point that corresponds to the current
+  # polygon, along with its id and the SRID used for the point geometry
+  # (presumably this is the same for all points)...this will also filter
+  # out the extra polygons created for the four dummy points, as they
+  # will not return a result from this query:
 ipoint <- pg.spi.exec(
 sprintf(
 "SELECT %3$s AS id, st_intersection('SRID='||st_srid(%2$s)||';%4$s'::text,'%5$s') AS polygon FROM %1$s WHERE st_intersects(%2$s::text,'SRID='||st_srid(%2$s)||';%4$s');",
@@ -1128,11 +1111,11 @@ arg2,
 buffer_distance
 )
 )
-# the following use of deldir uses high precision and digits to prevent
-# slivers between the output polygons, and uses a relatively large bounding
-# box with four dummy points included to ensure that points in the
-# peripheral areas of the dataset are appropriately enveloped by their
-# corresponding polygons:
+  # the following use of deldir uses high precision and digits to prevent
+  # slivers between the output polygons, and uses a relatively large bounding
+  # box with four dummy points included to ensure that points in the
+  # peripheral areas of the dataset are appropriately enveloped by their
+  # corresponding polygons:
 voro = deldir(
 points$x,
 points$y,
@@ -1201,32 +1184,30 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_ws_colname(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_ws_colname('12087','10','dengue','4')
+  # i.e. SELECT r_ws_colname('12087','10','dengue','4')
+  geoid  <- as.character(arg1)
+  span   <- as.character(arg2)
+  disease<- arg3
+  wsNum    <- as.integer(arg4)
 
-geoid  <- as.character(arg1)
-span   <- as.character(arg2)
-disease<- arg3
-wsNum    <- as.integer(arg4)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+  prefix <- base::as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
-prefix  <- base::as.character(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
+  t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax",sep="")
 
-t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_tmax",sep="")
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
+  wsName <- base::data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
 
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
-wsName  <- base::data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)
-
-wsName <- wsName[2:length(wsName[,1]),]
-ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
-
-return(ws)
+  wsName <- wsName[2:length(wsName[,1]),]
+  ws     <- base::paste("\"",wsName[wsNum],"\"",sep="")
+  return(ws)
 $BODY$
   LANGUAGE plr;
 
@@ -1235,42 +1216,38 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_ws_values(text, text, text, text)
   RETURNS SETOF text AS
 $BODY$
-# i.e. SELECT r_ws_values('12087','10','TMAX','4')
-# Just in case DROP FUNCTION r_ws_values(text,text,text,text) CASCADE 
+  # i.e. SELECT r_ws_values('12087','10','TMAX','4')
+  # Just in case DROP FUNCTION r_ws_values(text,text,text,text) CASCADE 
 
-geoid  <- as.character(arg1)
-span   <- as.character(arg2)
-type   <- as.character(arg3)
-type   <- tolower(type)
-wsNum  <- as.integer(arg4)
+  geoid  <- as.character(arg1)
+  span   <- as.character(arg2)
+  type   <- as.character(arg3)
+  type   <- tolower(type)
+  wsNum  <- as.integer(arg4)
 
-file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
-config <- yaml::yaml.load_file( file )
-driver <- "PostgreSQL"
-drv    <- RPostgres::Postgres()
-conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  config <- yaml::yaml.load_file( file )
+  drv    <- RPostgres::Postgres()
+  conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
+  prefix <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)  
 
+  t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,sep="")
 
-res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
-prefix <- as.character(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res)  
+  res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
+  wsName <- base::data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res) 
 
-t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,sep="")
+  wsName <- wsName[2:length(wsName[,1]),]
+  ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
 
-res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT g.column_name FROM ( SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '%1$s' ) as g", t1) )
-wsName <- base::data.frame(RPostgres::dbFetch(res))
-RPostgres::dbClearResult(res) 
+  res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
+  wsValue  <- data.frame(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+  RPostgres::dbDisconnect(conn)
+  return(wsValue)
 
-wsName <- wsName[2:length(wsName[,1]),]
-ws <- base::paste("\"",wsName[wsNum],"\"",sep="")
-
-res    <- RPostgres::dbSendQuery(conn, sprintf("SELECT %1$s FROM %2$s", ws, t1) )
-wsValue  <- data.frame(RPostgres::dbFetch(res))
-
-RPostgres::dbClearResult(res)
-RPostgres::dbDisconnect(conn)
-
-return(wsValue)
 $BODY$
   LANGUAGE plr;
 
@@ -1280,7 +1257,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION public.r_check_libpaths()
   RETURNS text AS
 $BODY$ 
-return(.libPaths())
+  return(.libPaths())
 $BODY$
   LANGUAGE plr;
 
