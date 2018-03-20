@@ -18,6 +18,7 @@ Imports:
 	RPostgres,
 	RPostgreSQL,
 	sp,
+	tidyverse,
         yaml
 Suggests: 
 	deldir,

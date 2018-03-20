@@ -112,7 +112,7 @@ ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate){
     spdf$name	 <- station.df$id
     spdf$mindate <- station.df$mindate
     spdf$maxdate <- station.df$maxdate
-   
+    spdf         <- tibble::rowid_to_column(spdf, "ogc_fid") 
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
    
     cat("Finished. Check Postgres table\n")
