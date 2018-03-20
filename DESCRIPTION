@@ -9,7 +9,6 @@ Depends: R (>= 3.4.0)
 License: GPL-3
 LazyData: true
 Imports:
-	downloader, 
 	hash,
 	lubridate,
 	RcppOctave,

@@ -303,7 +303,10 @@ $BODY$
   RPostgres::dbClearResult(res)
 
   if ( tableExist ) {
+
+    RPostgres::dbDisconnect(conn)
     return(tableName)
+
   } else {
 
     res   <- RPostgres::dbSendQuery(conn, sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) )
@@ -317,7 +320,12 @@ $BODY$
     updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
     zipFile   <- base::paste(pfile,".zip", sep="")
     download  <- base::paste(url, file, ".zip",sep="")
-    downloader::download( download , dest=zipFile, mode="wb")
+    download_err <-  utils::download.file(url, zipFile, "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
+    if (download_err) {
+      RPostgres::dbClearResult(res)
+      RPostgres::dbDisconnect(conn)
+      return("")
+    }
     utils::unzip(paste(pfile,".zip",sep=""), file=extractedFile) 
     input     <- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
     out       <- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
