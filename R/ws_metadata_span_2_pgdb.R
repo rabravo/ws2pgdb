@@ -105,7 +105,8 @@ ws_metadata_span_2_pgdb <- function( geoid, type, stations, span){
     spdf$name	 <- station.df$id
     spdf$mindate <- station.df$mindate
     spdf$maxdate <- station.df$maxdate
-    spdf         <- tibble::rowid_to_column(spdf,"ogc_fid") #Need it for historical reasons
+    spdf$ogc_fid <- seq.int(nrow(station))
+    #spdf         <- tibble::rowid_to_column(spdf,"ogc_fid") #Need it for historical reasons
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")  
 
     cat("Finished. Check Postgres table\n")
