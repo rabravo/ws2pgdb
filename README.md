@@ -421,6 +421,12 @@ $BODY$
     download   <- base::paste(url, file, ext, sep="")
     zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
     downloader::download( download , dest=zipFile, mode="wb")
+    download_err <-  utils::download.file(url, zipFile, "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
+    if (download_err) {
+      RPostgres::dbClearResult(res)
+      RPostgres::dbDisconnect(conn)
+      return("")
+    }
     dir    <- base::paste(pwd,"/","temp",sep="")
     utils::unzip(zipFile, overwrite = 'TRUE', exdir=dir)
     ext<-".shp"
