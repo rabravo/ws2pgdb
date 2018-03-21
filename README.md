@@ -159,9 +159,9 @@ CREATE OR REPLACE FUNCTION public.r_create_county_info(text, text, text)
   RETURNS text AS
 $BODY$
   #i.e. SELECT r_create_county_info('12087', 'TMAX', '10') 
-  geoid <- '12087'
-  type  <- 'TMAX'
-  span  <- '5'
+  geoid <- arg1 #'12087'
+  type  <- arg2 #'TMAX'
+  span  <- arg3 #'3'
   ghcnd <- 'GHCND'
 
 
@@ -173,13 +173,19 @@ $BODY$
   conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
 
-  stations       <-  ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
+  stations       <- ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
   ws_metadata    <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
 
   res            <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_create_tiger_tracts_table('%1$s')", geoid))
-  tigertableName <- as.character(RPostgres::dbFetch(res))  
-  RPostgres::dbClearResult(res)      
-  
+  tigertableName <- as.character(RPostgres::dbFetch(res))
+  RPostgres::dbClearResult(res)
+
+  if( identical(all.equal(tigertableName, ""), TRUE) ) {
+    RPostgres::dbDisconnect(conn)
+    return(tigertableName)
+  }
+
+
   table_cluster  <- base::paste( tigertableName, "_clustered_by_nearest_ws", sep="")
 
   # tractce) Build the distance matrix from the subregion's centroid to all weather stations
@@ -191,7 +197,7 @@ $BODY$
 
   res            <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_create_midas_synth_hh_table('%1$s')", geoid))
   midastableName <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)  
+  RPostgres::dbClearResult(res)
 
   temp           <- tigertableName
   midas_pop      <- base::gsub("tiger_tracts", "midas_pop", temp)
@@ -199,7 +205,7 @@ $BODY$
 
   res            <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", table_cluster))
   midasExist     <- as.integer(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)  
+  RPostgres::dbClearResult(res)
 
   q1 <- base::paste("\
     with\
@@ -222,12 +228,12 @@ $BODY$
   } else {
     res        <- RPostgres::dbSendQuery(conn, q1)
     q1_out     <- as.integer(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)      
+    RPostgres::dbClearResult(res)
   }
 
   res               <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", midas_pop_clustered_by_nearest_ws))
   midasClusterExist <- as.integer(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)        
+  RPostgres::dbClearResult(res)
 
 #----------Prepared Query / May be executed or not --------------------------
 
@@ -268,10 +274,9 @@ $BODY$
 
   }
 
+  RPostgres::dbDisconnect(conn)
   ws2pgdb::ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
   ws2pgdb::ws_data_na_span_2_pgdb(  ghcnd, geoid, type, span, ws_metadata )
-
-
   return(midas_pop_clustered_by_nearest_ws)
 
 $BODY$
@@ -295,7 +300,7 @@ $BODY$
 
   res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
   pre  <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)    
+  RPostgres::dbClearResult(res)
 
   tableName  <- paste(pre,"midas_synth_hh", sep="")
   res        <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_exists('%1$s')", tableName) )
@@ -320,20 +325,21 @@ $BODY$
     updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
     zipFile   <- base::paste(pfile,".zip", sep="")
     download  <- base::paste(url, file, ".zip",sep="")
-    download_err <-  utils::download.file(url, zipFile, "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
-    if (download_err) {
+    #download_err <-  utils::download.file(url, zipFile, method="wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
+    err <- try (curl::curl_download( download, zipFile, quiet = TRUE ) )
+    if (class(err) == "try-error") {
       RPostgres::dbClearResult(res)
       RPostgres::dbDisconnect(conn)
       return("")
     }
-    utils::unzip(paste(pfile,".zip",sep=""), file=extractedFile) 
-    input     <- utils::read.csv(file=extractedFile, head=TRUE,sep=",")
+    utils::unzip(paste(pfile,".zip",sep=""), file = extractedFile) 
+    input     <- utils::read.csv( file = extractedFile, head = TRUE, sep=",")
     out       <- input[c("stcotrbg", "hh_race", "hh_income","hh_size", "hh_age","longitude","latitude")]
-    utils::write.csv(out,file=updatedFile, row.names=FALSE)
+    utils::write.csv(out, file = updatedFile, row.names = FALSE)
 
     res   <- RPostgres::dbSendQuery(conn, sprintf( "COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile) )
     err <- as.character(RPostgres::dbFetch(res))
-    RPostgres::dbClearResult(res)  
+    RPostgres::dbClearResult(res)
     
     q5 <- paste("rm ",zipFile," ",updatedFile," ",extractedFile,sep="")
     system(q5)
@@ -413,15 +419,16 @@ $BODY$
     RPostgres::dbClearResult(res)
     state  <- gsub(" ", "_", state)
     ftp    <- "ftp://ftp2.census.gov/geo/pvs/tiger2010st/"
-    url    <- base::paste(ftp, substr(geoid, 1, 2), "_", state, "/", geoid, "/", sep="")  
+    url    <- base::paste(ftp, substr(geoid, 1, 2), "_", state, "/", geoid, "/", sep="")
     file   <- base::paste("tl_2010_",geoid,"_tract10",sep="")
     tableName  <- base::paste(file, sep="")
-    ext    <- ".zip"  
+    ext    <- ".zip"
     pfile  <- base::paste(pwd,"/",file,sep="")
     download   <- base::paste(url, file, ext, sep="")
     zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
-    download_err <-  utils::download.file(url, zipFile, "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
-    if (download_err) {
+    #download_err <-  utils::download.file(url, zipFile, method = "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
+    err <- try( curl::curl_download(download, zipFile, quiet = TRUE ) )
+    if (class(err) == "try-error") {
       RPostgres::dbClearResult(res)
       RPostgres::dbDisconnect(conn)
       return("")
@@ -432,7 +439,7 @@ $BODY$
     q5 <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
     system(q5)
     q6 <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
-    system(q6)  
+    system(q6)
     q7 <- paste("rm ", pwd, "/", "temp/*", sep = "")
     system(q7)
     return(pretableName)
