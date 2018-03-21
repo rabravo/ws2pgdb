@@ -173,7 +173,7 @@ $BODY$
   conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
 
-  stations       <- ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
+  stations       <-  ws2pgdb::all_coor_ws( ghcnd, geoid, type) 
   ws_metadata    <- ws2pgdb::ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
 
   res            <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_create_tiger_tracts_table('%1$s')", geoid))
@@ -289,7 +289,6 @@ $BODY$
 #i.e. SELECT r_create_midas_synth_hh_table('12087')
 
   pwd     <- base::Sys.getenv("PWD")
-  url     <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
   geoid       <- arg1
 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
@@ -317,15 +316,14 @@ $BODY$
     res   <- RPostgres::dbSendQuery(conn, sprintf( "SELECT r_create_synth_hh_table_template('%1$s')", tableName ) )
     debug <- as.integer(RPostgres::dbFetch(res))
     RPostgres::dbClearResult(res)
-    print(debug)
-
+    
+    url     <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
     file      <- base::paste("2010_ver1_",geoid,sep="")
     pfile     <- base::paste(pwd,"/","2010_ver1_",geoid,sep="")
     extractedFile <- base::paste(file, "_synth_households.txt", sep="")
     updatedFile   <- base::paste(pfile, "_synth_hh.csv", sep="")
     zipFile   <- base::paste(pfile,".zip", sep="")
     download  <- base::paste(url, file, ".zip",sep="")
-    #download_err <-  utils::download.file(url, zipFile, method="wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
     err <- try (curl::curl_download( download, zipFile, quiet = TRUE ) )
     if (class(err) == "try-error") {
       RPostgres::dbClearResult(res)
@@ -426,7 +424,6 @@ $BODY$
     pfile  <- base::paste(pwd,"/",file,sep="")
     download   <- base::paste(url, file, ext, sep="")
     zipFile    <- base::paste(pwd,"/temp/",file, ext, sep="")
-    #download_err <-  utils::download.file(url, zipFile, method = "wget", quiet = TRUE, extra = getOption("-q --connect-timeout=10") )
     err <- try( curl::curl_download(download, zipFile, quiet = TRUE ) )
     if (class(err) == "try-error") {
       RPostgres::dbClearResult(res)
@@ -1251,7 +1248,7 @@ $BODY$
   conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
   res    <- RPostgres::dbSendQuery( conn, sprintf("SELECT r_table_prefix('%1$s')", geoid) )
   prefix <- as.character(RPostgres::dbFetch(res))
-  RPostgres::dbClearResult(res)  
+  RPostgres::dbClearResult(res)
 
   t1  <- base::paste(prefix,"ws_data_span_",span,"_avg_",type,sep="")
 
