@@ -432,10 +432,11 @@ $BODY$
     }
     dir    <- base::paste(pwd,"/","temp",sep="")
     utils::unzip(zipFile, overwrite = 'TRUE', exdir=dir)
-    ext<-".shp"
-    q5 <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ext, " public.", pretableName, " " ,config$dbname," > ",pwd,"/script.sql", sep="")
+    scriptFile    <- base::paste(file, ".sql", sep="")
+    sqlscriptPath <- base::paste(pwd, "/temp/", scriptFile, sep="")
+    q5 <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ".shp", " public.", pretableName, " " ,config$dbname," > ", sqlscriptPath, sep="")
     system(q5)
-    q6 <- base::paste("psql -d ",config$dbname," -U ", config$dbuser, " -p ",config$dbport," -q --file='", pwd,"/script.sql'",sep="")
+    q6 <- base::paste("psql -d ", config$dbname, " -U ", config$dbuser, " -p ", config$dbport, " -q --file='", sqlscriptPath, "'",sep="")
     system(q6)
     q7 <- paste("rm ", pwd, "/", "temp/*", sep = "")
     system(q7)
