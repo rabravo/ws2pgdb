@@ -48,9 +48,9 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, suffix ){
 
   file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
   config <- yaml::yaml.load_file( file )
-  FIPS    <- base::paste("FIPS:", geoid, sep="")
+  FIPS   <- base::paste("FIPS:", geoid, sep="")
 
-  ws <- rnoaa::ncdc_stations(datasetid=ghcnd, datatypeid=type, locationid=FIPS, limit=1000, token=config$token) 
+  ws <- rnoaa::ncdc_stations(datasetid = ghcnd, datatypeid = type, locationid = FIPS, limit = 1000, token = config$token) 
 
   stations <- ws$data
   stations$id <- gsub("GHCND:", "", stations$id)
@@ -68,55 +68,55 @@ all_coor_ws_2_pgdb <- function( ghcnd, geoid, type, suffix ){
   )
 
   drv	 <- "PostgreSQL"
-  conn   <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  conn <- RPostgreSQL::dbConnect(drv, host = config$dbhost, port = config$dbport, dbname = config$dbname, user = config$dbuser, password = config$dbpwd)
 
   if ( as.integer(geoid) < 100) {
 
-    q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
+    q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep = "")
     res   <- RPostgreSQL::dbSendQuery(conn, q1)
     state <- RPostgreSQL::fetch(res) 
     RPostgreSQL::dbClearResult(res)
-    tableName        <- base::paste(state,"_",geoid,"_ws_",suffix,"_",sep="")
+    tableName        <- base::paste(state,"_", geoid, "_ws_", suffix, "_", sep = "")
 
   } else {
 
-    q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
+    q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid, "'", sep = "")
     res    <- RPostgreSQL::dbSendQuery(conn, q2)
     county <- RPostgreSQL::fetch(res)
     RPostgreSQL::dbClearResult(res)
-    q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
+    q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2), "'", sep = "")
 
     res    <- RPostgreSQL::dbSendQuery(conn, q3)
     state  <- RPostgreSQL::fetch(res) 
     RPostgreSQL::dbClearResult(res)
-    tableName <- base::paste(state, "_",county,"_",geoid,"_ws_",suffix,"_",sep="")
+    tableName <- base::paste(state, "_", county, "_", geoid, "_ws_", suffix, "_", sep = "")
 
   }
 
   varTable           <- tolower( tableName  )
   type               <- tolower(  type  )
-  tableName          <- base::paste( varTable, type, sep="")
+  tableName          <- base::paste( varTable, type, sep = "")
   tableName	     <-  gsub(" ", "_", tableName)
   
   if (RPostgreSQL::dbExistsTable(conn, tableName)) {
 
-    print(base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep="" ))
+    print(base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep = "" ))
     RPostgreSQL::dbDisconnect(conn)
     return(tableName)
 
   } else {
 
-    print( base::paste("Creating ", tableName, " table of ", type , sep="") )
-    pts               <- base::as.data.frame( stations[,c("longitude","latitude")] )
-    coord	      <- sp::SpatialPoints( pts )
-    spdf              <- sp::SpatialPointsDataFrame(coord, pts)
-    proj              <- "+init=epsg:4269"
+    print( base::paste("Creating ", tableName, " table of ", type , sep = "") )
+    pts    <- base::as.data.frame( stations[, c("longitude", "latitude")] )
+    coord  <- sp::SpatialPoints( pts )
+    spdf   <- sp::SpatialPointsDataFrame(coord, pts)
+    proj   <- "+init=epsg:4269"
     sp::proj4string(spdf) <- proj #CRS(proj)
 
     # Insert attributes into the SpatialPointsDataFrame 
-    spdf$mindate      <- stations$mindate
-    spdf$maxdate      <- stations$maxdate
-    spdf$name	      <- stations$id
+    spdf$mindate  <- stations$mindate
+    spdf$maxdate  <- stations$maxdate
+    spdf$name     <- stations$id
 
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
 

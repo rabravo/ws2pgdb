@@ -159,9 +159,9 @@ CREATE OR REPLACE FUNCTION public.r_create_county_info(text, text, text)
   RETURNS text AS
 $BODY$
   #i.e. SELECT r_create_county_info('12087', 'TMAX', '10') 
-  geoid <- arg1 #'12087'
-  type  <- arg2 #'TMAX'
-  span  <- arg3 #'3'
+  geoid <- arg1 
+  type  <- arg2
+  span  <- arg3
   ghcnd <- 'GHCND'
 
 
@@ -169,7 +169,6 @@ $BODY$
   config   <- yaml::yaml.load_file( pgfile )
   drv    <- RPostgres::Postgres()
 
-  #To override auth, provide your passwd via the .pgpass (see postgresql documentation)
   conn   <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
 
 
@@ -231,7 +230,7 @@ $BODY$
     RPostgres::dbClearResult(res)
   }
 
-  res               <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", midas_pop_clustered_by_nearest_ws))
+  res          <- RPostgres::dbSendQuery(conn, sprintf("SELECT r_table_exists('%1$s')", midas_pop_clustered_by_nearest_ws))
   midasClusterExist <- as.integer(RPostgres::dbFetch(res))
   RPostgres::dbClearResult(res)
 
@@ -274,9 +273,10 @@ $BODY$
 
   }
 
-  RPostgres::dbDisconnect(conn)
   ws2pgdb::ws_data_avg_span_2_pgdb( ghcnd, geoid, type, span, ws_metadata )
   ws2pgdb::ws_data_na_span_2_pgdb(  ghcnd, geoid, type, span, ws_metadata )
+
+  RPostgres::dbDisconnect(conn)  
   return(midas_pop_clustered_by_nearest_ws)
 
 $BODY$
@@ -436,7 +436,7 @@ $BODY$
     sqlscriptPath <- base::paste(pwd, "/temp/", scriptFile, sep="")
     q5 <- base::paste("shp2pgsql -c -s 4269 -g the_geom -W latin1 ",pwd, "/", "temp/", file, ".shp", " public.", pretableName, " " ,config$dbname," > ", sqlscriptPath, sep="")
     system(q5)
-    q6 <- base::paste("psql -d ", config$dbname, " -U ", config$dbuser, " -p ", config$dbport, " -q --file='", sqlscriptPath, "'",sep="")
+    q6 <- base::paste("set PGPASSWORD=config$dbpwd & psql -d ", config$dbname, " -U ", config$dbuser, " -p ", config$dbport, " -q --file='", sqlscriptPath, "'",sep="")
     system(q6)
     q7 <- paste("rm ", pwd, "/", "temp/*", sep = "")
     system(q7)
