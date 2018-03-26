@@ -13,7 +13,9 @@ ws_metadata_by_date_2_pgdb(geoid, type, stations, ssDate, ffDate)
 
 \item{stations}{The universe of stations from the rnoaa API from where the new subset will be computed.}
 
-\item{span}{This is the threshold used to limit the search .}
+\item{ssDate}{Staring date from interval to retrieve weather data}
+
+\item{ffDate}{Final   date from interval to retrieve weather data}
 }
 \value{
 Returns the name of the new table of the subset of weather stations with intersecting data
@@ -35,11 +37,8 @@ the threshold for the algorithm to search for the answers.
 Remember that all_coor_ws() returns a set of stations.
 }
 \examples{
-ghcnd    <- 'GHCND'
-geoid    <- '48113'
-type     <- 'TMAX'
-stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-ssDate   <- '2000-01-01'
-ffDate   <- '2001-01-01'
-ws_metadata_by_date_2_pgdb( geoid, type, stations, ssDate, ffDate) 
+stations <- as.data.frame(all_coor_ws( ghcnd = 'GHCND', geoid = '48113', type = 'TMAX'))
+ssDate <- '2000-01-01'
+ffDate <- '2001-01-01'
+ws_metadata_by_date_2_pgdb( geoid = '48113', type = 'TMAX', stations, ssDate, ffDate) 
 }

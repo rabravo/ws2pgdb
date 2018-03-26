@@ -2,7 +2,7 @@
 % Please edit documentation in R/ws_data_avg_by_date_2_pgdb.R
 \name{ws_data_avg_by_date_2_pgdb}
 \alias{ws_data_avg_by_date_2_pgdb}
-\title{ws_data_avg_by_date_2_pgdb() retrieves the subset of ws with intersectin data}
+\title{ws_data_avg_by_date_2_pgdb() retrieves the subset of ws with intersecting data}
 \usage{
 ws_data_avg_by_date_2_pgdb(ghcnd, geoid, type, sDate, fDate, ws_metadata)
 }
@@ -13,9 +13,11 @@ ws_data_avg_by_date_2_pgdb(ghcnd, geoid, type, sDate, fDate, ws_metadata)
 
 \item{type}{Variable under investigation i.e. TMAX, TMIN, PRCP}
 
-\item{ws_metadata}{The table name of the subset of weather stations with intersecting data}
+\item{sDate}{Staring date from interval to retrieve weather data}
 
-\item{span}{Indicates look-back time to search for available ws stations and data}
+\item{fDate}{Final   date from interval to retrieve weather data}
+
+\item{ws_metadata}{The table name of the subset of weather stations with intersecting data}
 }
 \value{
 Returns the name of the table that has been created. When fail, it returns 1.
@@ -30,16 +32,15 @@ The example shows the use of ws_metadata_by_date_2_pgdb(), but it can be very we
 ghcnd        <- 'GHCND'
 geoid        <- '48113'
 type         <- 'TMAX'
-stations     <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-ssDate       <- '2000-01-01'
-ffDate       <- '2001-01-01'
-ws_metadata  <- ws_metadata_by_date_2_pgdb( geoid, type, stations, ssDate, ffDate) 
-ws_data_avg_by_date_2_pgdb( ghcnd, geoid, type, ssDate, ffDate, ws_metadata)
+sDate       <- '2000-01-01'
+fDate       <- '2001-01-01'
+stations     <- as.data.frame(all_coor_ws(ghcnd, geoid, type))
+ws_metadata  <- ws_metadata_by_date_2_pgdb( geoid, type, stations, sDate, fDate)
+ws_data_avg_by_date_2_pgdb(ghcnd, geoid, type, sDate, fDate, ws_metadata)
 
 }
 \keyword{NOAA,}
-\keyword{RPostgreSQL,}
-\keyword{rgdal,}
+\keyword{Postgre,}
 \keyword{rnoaa}
 \keyword{station,}
 \keyword{weather}

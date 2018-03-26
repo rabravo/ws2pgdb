@@ -6,35 +6,39 @@
 #' @param degree is the order at one wants to adjusts the polynomio (for dengue degree=5) has the lowest norm
 #' @return returns the table name with evaluation of the model over the available data. 
 #' @examples
-#' file      <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+#' file      <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
 #' config    <- yaml::yaml.load_file( file )
 #' drv       <- RPostgres::Postgres()
-#' conn      <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-#' ghcnd     <- 'GHCND'
-#' geoid     <- '12087'
-#' type      <- 'TMAX'
-#' disease   <- 'dengue'
-#' degree    <- '5'
-#' stations  <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-#' span      <- '2'
-#' tMetaData <- ws_metadata_span_2_pgdb( geoid, type, stations, span)
-#' tModelDisease <- base::paste(tMetaData,"_dengue",sep="") 
+#' h         <- config$dbhost
+#' p         <- config$dbport
+#' d         <- config$dbname
+#' u         <- config$dbuser
+#' pwd       <- config$dbpwd
+#' conn      <- RPostgres::dbConnect(drv, host = h, port = p, dbname = d, user = u, password = pwd)
+#' stations  <- as.data.frame( all_coor_ws(ghcnd = 'GHCND', geoid = '12087', type = 'TMAX'))
+#' tMetaData <- ws_metadata_span_2_pgdb(geoid = '12087', type = 'TMAX', stations, span = '2') 
+#' disease  <- 'dengue'
+#' tModelDisease <- base::paste(tMetaData, "_", disease, sep = "")
 #' q         <- base::paste("select r_table_exists('", tModelDisease,"')", sep="")
 #' res       <- RPostgres::dbSendQuery(conn, q)
 #' exists    <- RPostgres::dbFetch(res)
 #' RPostgres::dbClearResult(res)
-#' if( as.integer( exists) ){ print("Exists!") }else{ dengue_model_conn(tMetaData, disease, conn, degree) }
+#' if (as.integer(exists)) {
+#'   print("Exists!")
+#' } else {
+#'   dengue_model_conn(tMetaData, disease, conn, degree = '5')
+#' }
 #' RPostgres::dbDisconnect(conn)
 #' @export
-dengue_model_conn <- function(tMetaData, disease, conn, degree){
+dengue_model_conn <- function(tMetaData, disease, conn, degree) {
   library(RcppOctave)
-  q1           <- base::paste("SELECT * FROM ", tMetaData, sep="")
+  q1           <- base::paste("SELECT * FROM ", tMetaData, sep = "")
   res          <- RPostgres::dbSendQuery(conn, q1)
   ws_data      <- data.frame(RPostgres::dbFetch(res), row.names=NULL)
   ws_data_temp <- data.matrix(ws_data, rownames.force=NA)
   RPostgres::dbClearResult(res)
   .O$real_temp <- ws_data_temp
-  if(1){
+  if (1) {
     .O$num     <- degree
     RcppOctave::o_source(text="\
 	      eip_y1 = [25 18 13 12 7 7];\
@@ -61,8 +65,8 @@ dengue_model_conn <- function(tMetaData, disease, conn, degree){
 	   ")
 
   }
-  tableName <- paste(tMetaData,"_",disease, sep="")
-  RPostgres::dbWriteTable( conn, tableName, as.data.frame( .O$eip ) )
+  tableName <- paste(tMetaData, "_", disease, sep = "")
+  RPostgres::dbWriteTable(conn, tableName, as.data.frame(.O$eip))
   o_clear(all=TRUE)
   return(tableName)
 }

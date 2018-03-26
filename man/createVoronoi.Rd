@@ -32,11 +32,7 @@ and TYPE was renamed as the r_voronoi_scale_type. In the original code, search f
 to make createVoronoi() to work as explained in the example.
 }
 \examples{
-ghcnd <- 'GHCND'
-geoid <- '40'
-type  <- 'TMAX'
-sufix <- 'create_voronoi_example'
-tableName <- all_coor_ws_2_pgdb( ghcnd, geoid, type, sufix )
-createVoronoi(tableName, "geom", "ogc_fid", 0.25)
+tableName<- all_coor_ws_2_pgdb(ghcnd='GHCND', geoid='40', type='TMAX', suffix='voronoi_example')
+createVoronoi(tableName, the_geom = "geom", ogc_fid = "ogc_fid", scale = 0.25)
 
 }

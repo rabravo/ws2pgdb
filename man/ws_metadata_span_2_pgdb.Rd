@@ -35,14 +35,10 @@ the threshold for the algorithm to search for the answers.
 Remember that all_coor_ws() returns a set of stations.
 }
 \examples{
-ghcnd <- 'GHCND'
-geoid <- '12087'
-type  <- 'TMAX'
-stations <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span <- '2'
-ws_metadata_span_2_pgdb( geoid, type, stations, span) 
+stations <- as.data.frame(all_coor_ws(ghcnd = 'GHCND', geoid = '12087', type = 'TMAX'))
+ws_metadata_span_2_pgdb( geoid = '12087', type = 'TMAX', stations, span = '2')
 }
-\keyword{RPostgres,}
+\keyword{RPostgreSQL,}
 \keyword{county,}
 \keyword{estate.}
 \keyword{span}

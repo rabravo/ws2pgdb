@@ -28,9 +28,9 @@ The example shows the use of ws_metadata_span_2_pgdb(), but it can be very well 
 ghcnd        <- 'GHCND'
 geoid        <- '12087'
 type         <- 'TMAX'
-stations     <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
 span         <-'2'
-ws_metadata  <- ws_metadata_span_2_pgdb( geoid, type, stations, span ) 
+stations     <- as.data.frame(all_coor_ws(ghcnd, geoid, type))
+ws_metadata  <- ws_metadata_span_2_pgdb(geoid, type, stations, span ) 
 ws_data_avg_2_pgdb( ghcnd, geoid, type, ws_metadata)
 
 }

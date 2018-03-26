@@ -22,24 +22,28 @@ returns the tail of the data that has been found.
 west_nile_model_conn() habia una vez ...
 }
 \examples{
-file      <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+file      <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
 config    <- yaml::yaml.load_file( file )
-driver    <- "PostgreSQL"
 drv       <- RPostgres::Postgres()
-conn      <- RPostgres::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
-ghcnd     <- 'GHCND'
-geoid     <- '12087'
-type      <- 'TMAX'
-disease   <- 'west_nile'
-degree    <- '5'
-stations  <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-span      <- '2'
-tMetaData <- ws_metadata_span_2_pgdb( geoid, type, stations, span) 
-tModelDisease <- base::paste(tMetaData,"_west_nile",sep="") 
-q         <- base::paste("select r_table_exists('", tModelDisease,"')", sep="")
+h         <- config$dbhost
+p         <- config$dbport
+d         <- config$dbname
+u         <- config$dbuser
+pwd       <- config$dbpwd
+conn      <- RPostgres::dbConnect(drv, host = h, port = p, dbname = d, user = u, password = pwd)
+stations  <- as.data.frame( all_coor_ws(ghcnd = 'GHCND', geoid = '12087', type = 'TMAX'))
+tMetaData <- ws_metadata_span_2_pgdb(geoid = '12087', type = 'TMAX', stations, span = '2') 
+disease  <- 'west_nile'
+tModelDisease <- base::paste(tMetaData, "_", disease, sep = "") 
+q         <- base::paste("select r_table_exists('", tModelDisease, "')", sep = "")
 res       <- RPostgres::dbSendQuery(conn, q)
 exists    <- RPostgres::dbFetch(res)
 RPostgres::dbClearResult(res)
-if( as.integer( exists) ){ print("Exists!") }else{ west_nile_model_conn(tMetaData, disease, conn, degree) }
+if (as.integer(exists)) { 
+  print("Exists!")
+} else {
+  west_nile_model_conn(tMetaData, disease, conn, degree = '5')
+}
 RPostgres::dbDisconnect(conn)
+
 }

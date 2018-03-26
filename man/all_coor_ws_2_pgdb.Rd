@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_coor_ws_2_pgdb.R
 \name{all_coor_ws_2_pgdb}
 \alias{all_coor_ws_2_pgdb}
-\title{all_coor_ws_2_pgdb retrieves NOAA data and creates a table in a Postgres database}
+\title{all_coor_ws_2_pgdb retrieves NOAA data and creates a table in a PG database.}
 \usage{
 all_coor_ws_2_pgdb(ghcnd, geoid, type, suffix)
 }
@@ -23,27 +23,18 @@ The function retrieves the coordinates (coor) longitude and latitude; geometry o
 name of NOAA weather stations (ws), as well as minimum and maximum date of available information.
 It stores all the data with in a table in a Posgresql (pg) database (db) with POSTGIS extension 
 installed on it. The function necessitates arguments: ghcnd, FIPS, type, geoid. The suffix argument
-is used for naming the table in the database. 
-The dbhost, dbport, dbname, dbuser, dbpasswd, isgraphic, and noaa_token (key to NOAA service) are 
-specified in a local file named pg_conf.yml that will be read in by yaml. See file format below. 
-As it should be clear by now, this package assumes you have installed a Postgres database and 
-the right permissions to create/read/write on it.
+is used for naming the table in the database. The dbhost, dbport, dbname, dbuser, dbpasswd,
+and noaa_token (key to NOAA service) are specified in a local file named pg_conf.yml that will 
+be read in by yaml. See file format below. As it should be clear by now, this package assumes 
+you have installed a Postgres database and the right permissions to create/read/write on it.
 }
 \note{
-pg_config.yml has the following structure
-
-dbhost : serverName (default localhost)
-
-dbport : portNumber (default 5432)
-
-dbname : databaseName
-
-dbuser : userName
-
-dbpwd  : password
-
-isgraphic: 0 (zero when gWidgets is not available) 
-
+pg_config.yml has the following structure:
+dbhost : Host Name (default localhost)
+dbport : Port Number (default 5432)
+dbname : Database Name
+dbuser : User Name
+dbpwd  : Password
 token  : NOAA keypass
 
 The output table name has the following form: st_co_geoid_suffix_ws_type
@@ -51,11 +42,8 @@ The output table name has the following form: st_co_geoid_suffix_ws_type
 The function assumes that a cb_2013_us_state_20m and a cb_2013_us_county_20m exist in the postgres database.
 }
 \examples{
-ghcnd <- 'GHCND'
-geoid <- '12087'
-type  <- 'PRCP'
-suffix <- 'all_coor'
-all_coor_ws_2_pgdb( ghcnd, geoid, type, suffix )
+all_coor_ws_2_pgdb(ghcnd = 'GHCND', geoid = '12087', type = 'PRCP', suffix = 'all_coor')
+
 }
 \keyword{NOAA,}
 \keyword{PostgreSQL,}

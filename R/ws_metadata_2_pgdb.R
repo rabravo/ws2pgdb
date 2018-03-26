@@ -26,52 +26,53 @@
 #' @export
 ws_metadata_2_pgdb <- function( geoid, type, stations){
 
-  file   <- base::paste(Sys.getenv("HOME"), "/","pg_config.yml", sep="")
+  file   <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
   config <- yaml::yaml.load_file( file )
-
-  drv     <- "PostgreSQL"
-  conn	  <- RPostgreSQL::dbConnect(drv, host= config$dbhost, port= config$dbport, dbname= config$dbname, user= config$dbuser, password= config$dbpwd)
+  conn <- RPostgreSQL::dbConnect( drv = "PostgreSQL", 
+                                  host = config$dbhost, 
+                                  port = config$dbport, 
+                                  dbname = config$dbname,
+                                  user = config$dbuser, 
+                                  password = config$pwd
+  )
 
   if ( as.integer(geoid) < 100) {
   
-    q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid,"'", sep="")
+    q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid, "'", sep = "")
     res   <- RPostgreSQL::dbSendQuery(conn, q1)
     state <- data.frame(RPostgreSQL::fetch(res))
     RPostgreSQL::dbClearResult(res)
-    tableName <- base::paste(state, "_", geoid,"_ws_metadata_", sep="")
+    tableName <- base::paste(state, "_", geoid, "_ws_metadata_", sep = "")
 
   } else {
 
-    q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep="")
+    q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid, "'", sep = "")
     res   <- RPostgreSQL::dbSendQuery(conn, q2)
     county<- data.frame(RPostgreSQL::fetch(res))
     RPostgreSQL::dbClearResult(res)
-    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2),"'", sep="")
+    q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2), "'", sep = "")
     res   <- RPostgreSQL::dbSendQuery(conn,q3)
     state <- data.frame(RPostgreSQL::fetch(res))
     RPostgreSQL::dbClearResult(res)
-    tableName<- base::paste(state, "_",county,"_",geoid,"_ws_metadata_", sep="")
+    tableName<- base::paste(state, "_", county, "_", geoid, "_ws_metadata_", sep = "")
 
   }# endIF/ELSE
 
-  varTable  <- tolower( tableName  )
-  type      <- tolower(  type  )
+  varTable  <- tolower(tableName)
+  type      <- tolower(type)
   tableName <- base::paste( varTable, type, sep="")      
   tableName <- gsub(" ", "_", tableName)
   
   if (RPostgreSQL::dbExistsTable(conn, tableName)) {
-
     msg <- base::paste("Done - Table ", tableName, " exists.\t\t\t\t\n", sep="")
     cat(msg)
     RPostgreSQL::dbDisconnect(conn)
-    return(tableName)    
-
+    return(tableName)
   } else {
-
-    name_and_date.df<- stations[,c("id","mindate","maxdate","longitude","latitude")]
-
+    name_and_date.df <- stations[,c("id","mindate","maxdate","longitude","latitude")]
+    
     # Sorted Indexes
-    order.maxdate   <- order(name_and_date.df$maxdate, decreasing = TRUE)   	
+    order.maxdate    <- order(name_and_date.df$maxdate, decreasing = TRUE)   	
 
     # Get the intervals sort in decreasing order      
     stationSortByMaxDate <- name_and_date.df[order.maxdate,]                 	
@@ -80,13 +81,13 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
     # subIntervalDataCover      <- subset( stationSortByMaxDate, datacoverage >= 0.90 )
 
     # Filter station with maxdate year in 2015
-    subIntervalYear <- subset( stationSortByMaxDate, lubridate::year(  maxdate ) == lubridate::year( lubridate::today() ) )
+    subIntervalYear <- subset(stationSortByMaxDate, lubridate::year(maxdate) == lubridate::year(lubridate::today()))
 
     # Update date to beginning of current year  
-    subIntervalYear$maxdate <- base::as.Date( lubridate::floor_date( lubridate::today() , "year") )  	
+    subIntervalYear$maxdate <- base::as.Date(lubridate::floor_date(lubridate::today(), "year"))
 
     # Sorted Indexes
-    order.mindate   <- order( subIntervalYear$mindate, decreasing = TRUE)    
+    order.mindate   <- order(subIntervalYear$mindate, decreasing = TRUE)    
 
     # Get the intervals sort in decreasing order
     stationSortByMinDate <- subIntervalYear[order.mindate,]                  	
@@ -101,25 +102,23 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
     numStations <- 5
   
    
-    if ( !( isTRUE( nrow( stationSortByMinDate ) < numStations ) ) ) {
+    if (!(isTRUE(nrow(stationSortByMinDate) < numStations))) {
 
       # Theshold guarantees latest information    
-      thrs <- lubridate::year( base::as.Date( lubridate::floor_date(  lubridate::today() , "year") ) ) - threshold
+      thrs <- lubridate::year(base::as.Date(lubridate::floor_date(lubridate::today(), "year"))) - threshold
     
-      subIntervalMinSizeOfAYear <- subset(stationSortByMinDate,  lubridate::year( mindate ) <= thrs ) 
+      subIntervalMinSizeOfAYear <- subset(stationSortByMinDate, lubridate::year(mindate) <= thrs) 
     
       # Heursitics: when number of weather stations is small, this section will intend to increase the 
       # number of weather stations while reducing the threshold value.
     
       repeat{
-    
-        # The number of minimum weather stations     
-        if ( !( isTRUE( nrow(subIntervalMinSizeOfAYear) >= numStations - 1 ) ) ) {
+        # The number of minimum weather stations
+        if (!(isTRUE(nrow(subIntervalMinSizeOfAYear) >= numStations - 1))) {
           thrs <- thrs - 1
-          subIntervalMinSizeOfAYear <- subset(stationSortByMinDate,  lubridate::year( mindate  ) <= thrs ) 
-        } else { break }# endIF/ELSE      
+          subIntervalMinSizeOfAYear <- subset(stationSortByMinDate,  lubridate::year(mindate) <= thrs )
+        } else { break }# endIF/ELSE
       }# endREPEAT
-    
     } else { 
          order.min <- order( stationSortByMinDate$mindate, decreasing = TRUE)
          subIntervalMinSizeOfAYear <- stationSortByMinDate[order.min,]
@@ -135,33 +134,24 @@ ws_metadata_2_pgdb <- function( geoid, type, stations){
     # Simplistic naming return this data structure
     station.df <- subIntervalMinSizeOfAYear                                  
     
-    msg <- base::paste("Creating ", tableName, " table of ", type , sep="")    
+    msg <- base::paste("Creating ", tableName, " table of ", type, sep = "")    
     Sys.sleep(3)
     cat(msg)
 
-    pts   <- as.data.frame( station.df[,c("longitude","latitude")] )
+    pts   <- as.data.frame(station.df[, c("longitude","latitude")])
     coord <- sp::SpatialPoints(pts)
     spdf  <- sp::SpatialPointsDataFrame(coord, pts)
     proj  <- "+init=epsg:4269"
     sp::proj4string(spdf) <- proj #CRS(proj)
 
     # Insert attributes into the SpatialPointsDataFrame 
-    spdf$name	 <- station.df$id
+    spdf$name    <- station.df$id
     spdf$mindate <- station.df$mindate
     spdf$maxdate <- station.df$maxdate
     spdf$ogc_fid <- seq.int(nrow(station.df))
-    #spdf         <- tibble::rowid_to_column(spdf,"ogc_fid") #Need it for historical reasons  
-
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")  
-     
     cat("Finished. Check Postgres table")
-  
-    station.df <- spdf 
-   
   }# endIF/ELSE
-  
   RPostgreSQL::dbDisconnect(conn)
-  RPostgreSQL::dbUnloadDriver(drv)      
   return(tableName)
-
 }# endFUNCTION

@@ -4,7 +4,7 @@
 \alias{df_2_pgdb}
 \title{df_2_pgdb() stores weather station in database}
 \usage{
-df_2_pgdb(ghcnd, geoid, type, coor_ws, sufix)
+df_2_pgdb(ghcnd, geoid, type, coor_ws, suffix)
 }
 \arguments{
 \item{ghcnd}{String that refers to the Global Historical Climate Network (daily) dataset}
@@ -15,7 +15,7 @@ df_2_pgdb(ghcnd, geoid, type, coor_ws, sufix)
 
 \item{coor_ws}{Data frame with noaa weather station information}
 
-\item{sufix}{Help to name table at the database}
+\item{suffix}{Help to name table at the database}
 }
 \value{
 Function returns a data frame. When fails store the information, it return 1.
@@ -26,22 +26,18 @@ and saves it as a table in a Postgres database. The function necessitates argume
 and the data frame.
 }
 \note{
-The output table name has the following form: st_co_geoid_ws_sufix_type 
+The output table name has the following form: st_co_geoid_ws_suffix_type 
 "st" is the U.S. State, and  "co" is the U.S. County name. "geoid" is the fips identifier.
-"sufix" a character string to identify table,and "type" is the weather variable (i.e. TMAX,TMIN,PRCP).
+"suffix" a character string to identify table,and "type" is the weather variable (i.e. TMAX,TMIN,PRCP).
 The function assumes that a cb_2013_us_state_20m and a cb_2013_us_county_20m exist in the postgres database.
 }
 \examples{
-ghcnd   <- 'GHCND'
-geoid   <- '36061'
-type    <- 'PRCP'
-sufix   <- 'example'
-ncdc.df <- as.data.frame( all_coor_ws( ghcnd, geoid, type) )
-df_2_pgdb( ghcnd, geoid, type, ncdc.df, sufix )
+ncdc.df <- as.data.frame(all_coor_ws(ghcnd = 'GHCND', geoid = '36061', type = 'PRCP'))
+df_2_pgdb(ghcnd = 'GHCND', geoid = '36061', type = 'PRCP', ncdc.df, suffix = 'example')
+
 }
 \keyword{NOAA,}
 \keyword{RPostgreSQL,}
-\keyword{rgdal,}
 \keyword{rnoaa}
 \keyword{station,}
 \keyword{weather}
