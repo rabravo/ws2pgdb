@@ -14,9 +14,9 @@
 #' or the value 1 when fail to find weather station information.
 #' 
 #' @examples
-#' tableName <-all_coor_ws_2_pgdb( ghcnd = 'GHCND',
-#'                                 geoid = '12087', 
-#'                                 type = 'PRCP', 
+#' tableName <-all_coor_ws_2_pgdb( ghcnd  = 'GHCND',
+#'                                 geoid  = '12087', 
+#'                                 type   = 'PRCP', 
 #'                                 suffix = 'example'
 #'                               )
 #' canopiVoronoi(tableName, geoid = '12087')
@@ -40,17 +40,15 @@ canopiVoronoi <- function(tableName, geoid) {
 
   file   <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
   config <- yaml::yaml.load_file( file )
-  drv    <- RPostgres::Postgres()
   print("Downloading data and creating Postgres table ...\t\t\t\t ")
-
   if (!is.null( tableName)) {
-      conn <- RPostgres::dbConnect( drv = "PostgreSQL", 
-                                      host = config$dbhost, 
-                                      port = config$dbport, 
-                                      dbname = config$dbname, 
-                                      user = config$dbuser, 
-                                      password = config$pwd
-                                    )
+    conn <- RPostgres::dbConnect( drv      = RPostgres::Postgres(), 
+                                  host     = config$dbhost, 
+                                  port     = config$dbport, 
+                                  dbname   = config$dbname, 
+                                  user     = config$dbuser, 
+                                  password = config$pwd
+                                )
       voronoiTableName  <- as.character(base::paste(tableName, "_v_poly", sep = ""))
 
       if (RPostgres::dbExistsTable(conn, voronoiTableName)) {
@@ -68,7 +66,7 @@ canopiVoronoi <- function(tableName, geoid) {
 	}# endIF
 
     geoid        <- as.character(geoid)
-    voronoiTable <- base::paste(" r_voronoi('", tableName ,"', 'geom' , 'ogc_fid' )", sep = "")
+    voronoiTable <- base::paste(" r_voronoi('",tableName , "', 'geom', 'ogc_fid')", sep = "")
     intersection <- base::paste(
 	"with \
 	 county  AS(\

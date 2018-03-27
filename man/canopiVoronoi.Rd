@@ -38,9 +38,9 @@ When using the functions from this package to produce the table with the geometr
 shown in the example, you should not have problems reusing canopiVoronoi().
 }
 \examples{
-tableName <-all_coor_ws_2_pgdb( ghcnd = 'GHCND',
-                                geoid = '12087', 
-                                type = 'PRCP', 
+tableName <-all_coor_ws_2_pgdb( ghcnd  = 'GHCND',
+                                geoid  = '12087', 
+                                type   = 'PRCP', 
                                 suffix = 'example'
                               )
 canopiVoronoi(tableName, geoid = '12087')
