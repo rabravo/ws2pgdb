@@ -14,7 +14,7 @@ all_coor_ws(ghcnd, geoid, type)
 \item{type}{Variable name under investigation i.e. TMAX, TMIN, PRCP}
 }
 \value{
-The function returns a data frame. When it fails to retrieve information, it returns 1.
+Data frame of NULL if error occurs
 }
 \description{
 The function retrieves all NOAA weather station (ws) data available in a region ( State/County ) related

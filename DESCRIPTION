@@ -1,26 +1,22 @@
 Package: ws2pgdb
 Title: Retrieves, manipulates, and stores data from NOAA, U.S.Census, and Epimodels.org. Uses location of weather stations (ws) to create a clustering of counties around the ws
-Version: 0.4.0
-Authors@R: person("Angel", "Bravo", email = "angel.bravo@miamioh.edu", role =c("aut", "cre"))
+Version: 0.5.0
+Authors@R: person("Angel", "Bravo", email = "bravosalgado@oakland.edu", role =c("aut", "cre"))
 Author: Angel Bravo  [aut, cre]
-Maintainer: Angel Bravo <angel.bravo@miamioh.edu>
-Description: This package starred as many others out there, as a large collection of functions in a source file. It became hard to look through the file and find the right function for my research towards the completion of my disseration. Functions will be described in detail in the help section, but the main theme is to automatically retrieve, filter, store, information from the NOAA data werahouse. Not surprises, I used several packages available in R CRAN and github repository like the 'rnoaa'. Several functions automatically acquired remote information and store it in a local/remote Postgres database. Other functions assume that there exist TIGER tables at the Postgres database (check the help for more details). This package is an ongoing-no-free-from-bugs-work software. There are missing handlers for errors in remote connections. For instance, missing handlers using rnoaa. Normally, the NOAA API is online but could not be the case from time to time. Another error could happen on the client side requesting a non-existing table or using an invalid user name or password to access the database (all that needs handlers for cleaner returns), that's all, salu2.
+Maintainer: Angel Bravo <bravosalgado@oakland.edu>
+Description: This package starred as many others out there, as a large collection of functions in a source file. It became hard to look through the file and find the right function for my research towards the completion of my disseration. Functions will be described in detail in the help section, but the main theme is to automatically retrieve, filter, store, information from the NOAA data werahouse. Member functions of the pacakge automatically acquired remote data and store it in a local/remote Postgres database. Also, some member functions assume that there exist TIGER tables at the Postgres database (check the help for more details). Warning: this package is an ongoing-not-free-from-bugs-work software. Many errors from remote connections are not properly handeld yet. Another error could occur when client side requests a non-existing table or uses an invalid user name or password to access the database (all that needs handlers for cleaner returns), that's all, salu2.
 Depends: R (>= 3.4.0)
 License: GPL-3
 LazyData: true
 Imports:
-  deldir,
+	deldir,
 	hash,
 	lubridate,
-	Rcpp,
-	RcppOctave,
 	rnoaa,
 	rpostgis,
-	RPostgres,
-	RPostgreSQL,
+	RPostgres,	
 	sp,
-  yaml
+	yaml
 Suggests:
-	devtools,
-  testthat
-RoxygenNote: 6.0.1
+	testthat
+RoxygenNote: 6.1.1
