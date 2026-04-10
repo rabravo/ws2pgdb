@@ -33,7 +33,12 @@ Copy, paste, and execute the queries found in sql/functions.sql on the pgsql ser
 #About Docker files
 There has been an update where sql/functions.sql will be loaded in the container. No need to do nothing but running the dockerfile and create the image and run container
 
-docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -d  postgis-plr:3.5.2
+docker rm -f pg-gis-plr
+docker build -t postgis-plr:3.5.2 docker/
+docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -d postgis-plr:3.5.2
+docker logs pg-gis-plr
 docker exec -it pg-gis-plr psql -U postgres
+docker stop pg-gis-plr
+docker start pg-gis-plr
 
 

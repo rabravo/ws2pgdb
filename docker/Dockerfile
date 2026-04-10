@@ -32,5 +32,26 @@ RUN wget https://download.osgeo.org/postgis/source/postgis-3.5.2.tar.gz && \
 # Configure PostgreSQL to enable PL/R and PostGIS extensions
 RUN echo "shared_preload_libraries = 'plr,postgis-3'" >> /usr/share/postgresql/postgresql.conf.sample
 
+# Install system dependencies for R devtools
+RUN apt-get update && apt-get install -y \
+    r-base \
+    r-base-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libfontconfig1-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev && \
+    apt-get clean
+
+# Install remotes and ws2pgdb R package from GitHub
+RUN apt-get update && apt-get install -y libgit2-dev && apt-get clean && \
+    R -e "install.packages('remotes', repos='https://cloud.r-project.org')" && \
+    R -e "remotes::install_github('rabravo/ws2pgdb')"
+
 # Copy the initialization script to the proper directory
 COPY --chmod=755 init-db.sh /docker-entrypoint-initdb.d/init-db.sh
