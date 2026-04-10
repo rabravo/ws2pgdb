@@ -30,13 +30,13 @@ ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate) {
 
   file   <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
   config <- yaml::yaml.load_file(file)
-  conn <- RPostgreSQL::dbConnect( drv = "PostgreSQL", 
-                                  host = config$dbhost, 
-                                  port = config$dbport, 
-                                  dbname = config$dbname,
-                                  user = config$dbuser, 
-                                  password = config$pwd
-                                )
+  conn <- DBI::dbConnect( RPostgres::Postgres(),
+                          host     = config$dbhost,
+                          port     = config$dbport,
+                          dbname   = config$dbname,
+                          user     = config$dbuser,
+                          password = config$pwd
+                        )
 
   sDate  <- gsub("-", "", ssDate)
   fDate  <- gsub("-", "", ffDate)
@@ -44,22 +44,22 @@ ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate) {
   if (as.integer(geoid) < 100) {
   
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", geoid, "'", sep = "")
-    res   <- RPostgreSQL::dbSendQuery(conn, q1)
-    state <- RPostgreSQL::fetch(res)
-    RPostgreSQL::dbClearResult(res)
+    res   <- DBI::dbSendQuery(conn, q1)
+    state <- DBI::dbFetch(res)
+    DBI::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid, "_ws_metadata_from_", sDate, "_to_", fDate, sep = "")
 
   } else {
 
     q2    <- base::paste("select NAME from cb_2013_us_county_20m where GEOID='", geoid,"'", sep = "")
-    res   <- RPostgreSQL::dbSendQuery(conn, q2)
-    county<- RPostgreSQL::fetch(res)
-    RPostgreSQL::dbClearResult(res)
+    res   <- DBI::dbSendQuery(conn, q2)
+    county<- DBI::dbFetch(res)
+    DBI::dbClearResult(res)
 
     q3    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID='", substr(geoid, 1, 2), "'", sep = "")
-    res   <- RPostgreSQL::dbSendQuery(conn, q3)
-    state <- RPostgreSQL::fetch(res)
-    RPostgreSQL::dbClearResult(res)
+    res   <- DBI::dbSendQuery(conn, q3)
+    state <- DBI::dbFetch(res)
+    DBI::dbClearResult(res)
     tableName<- base::paste(state, "_", county, "_", geoid, "_ws_metadata_from_", sDate, "_to_", fDate, sep = "")
 
   }# endIF/ELSE
@@ -69,12 +69,12 @@ ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate) {
   tableName <- base::paste(varTable, "_", type, sep = "")      
   tableName <- gsub(" ", "_", tableName)
 
-  if (RPostgres::dbExistsTable(conn, tableName)) {
+  if (DBI::dbExistsTable(conn, tableName)) {
 
     msg <- base::paste("\nDone - Table ", tableName, " exists.\t\t\t\t\t\n", sep = "")
     Sys.sleep(3)    
     cat(msg)
-    RPostgreSQL::dbDisconnect(conn)
+    DBI::dbDisconnect(conn)
     return(tableName)    
 
   } else {
@@ -116,6 +116,6 @@ ws_metadata_by_date_2_pgdb <- function( geoid, type, stations, ssDate, ffDate) {
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
     cat("Finished. Check Postgres table\n")
   }# endIF/ELSE
-  RPostgreSQL::dbDisconnect(conn)
+  DBI::dbDisconnect(conn)
   return(tableName)
 }# endFUNCTION

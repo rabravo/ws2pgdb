@@ -1,0 +1,18 @@
+# Claude Code session data
+.claude/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Sensitive config (contains DB credentials)
+pg_config.yml
+~/pg_config.yml
+
+# Build artifacts
+/doc/
+/Meta/
+/man/*.Rd
+NAMESPACE

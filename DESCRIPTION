@@ -10,11 +10,12 @@ License: GPL-3
 LazyData: true
 Imports:
 	deldir,
+	DBI,
 	hash,
 	lubridate,
 	rnoaa,
 	rpostgis,
-	RPostgres,	
+	RPostgres,
 	sp,
 	yaml
 Suggests:

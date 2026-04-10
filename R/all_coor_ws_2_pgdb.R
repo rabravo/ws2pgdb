@@ -38,13 +38,13 @@ all_coor_ws_2_pgdb <- function(ghcnd, geoid, type, suffix) {
 
   file <- base::paste(Sys.getenv("HOME"), "/", "pg_config.yml", sep = "")
   config <- yaml::yaml.load_file(file)
-  conn <- RPostgreSQL::dbConnect( drv      = "PostgreSQL", 
-                                  host     = config$dbhost, 
-                                  port     = config$dbport, 
-                                  dbname   = config$dbname,
-                                  user     = config$dbuser, 
-                                  password = config$pwd
-                                 )
+  conn <- DBI::dbConnect( RPostgres::Postgres(),
+                          host     = config$dbhost,
+                          port     = config$dbport,
+                          dbname   = config$dbname,
+                          user     = config$dbuser,
+                          password = config$pwd
+                        )
 
   FIPS <- base::paste("FIPS:", geoid, sep = "")
   ws   <- rnoaa::ncdc_stations( datasetid  = ghcnd, 
@@ -59,7 +59,7 @@ all_coor_ws_2_pgdb <- function(ghcnd, geoid, type, suffix) {
   if ( length( which( stations$id == FALSE) ) > 0  ) {
     msg <- base::paste("Not Data Available for variable type:  ", type, " exists.\t\t\t\t\t", sep = "" )
     cat( msg )
-    RPostgreSQL::dbDisconnect(conn)
+    DBI::dbDisconnect(conn)
     return('1')
   }
 
@@ -71,22 +71,22 @@ all_coor_ws_2_pgdb <- function(ghcnd, geoid, type, suffix) {
   
   if (as.integer(geoid) < 100) {
     q1    <- base::paste("select NAME from cb_2013_us_state_20m where GEOID = '", geoid, "'", sep = "")
-    res   <- RPostgreSQL::dbSendQuery(conn, q1)
-    state <- RPostgreSQL::fetch(res) 
-    RPostgreSQL::dbClearResult(res)
+    res   <- DBI::dbSendQuery(conn, q1)
+    state <- DBI::dbFetch(res) 
+    DBI::dbClearResult(res)
     tableName <- base::paste(state, "_", geoid, "_ws_", suffix, "_", sep = "")
 
   } else {
 
     q2     <- base::paste("select NAME from cb_2013_us_county_20m where GEOID = '", geoid, "'", sep = "")
-    res    <- RPostgreSQL::dbSendQuery(conn, q2)
-    county <- RPostgreSQL::fetch(res)
-    RPostgreSQL::dbClearResult(res)
+    res    <- DBI::dbSendQuery(conn, q2)
+    county <- DBI::dbFetch(res)
+    DBI::dbClearResult(res)
     q3     <- base::paste("select NAME from cb_2013_us_state_20m where GEOID = '", substr(geoid, 1, 2), "'", sep = "")
 
-    res    <- RPostgreSQL::dbSendQuery(conn, q3)
-    state  <- RPostgreSQL::fetch(res) 
-    RPostgreSQL::dbClearResult(res)
+    res    <- DBI::dbSendQuery(conn, q3)
+    state  <- DBI::dbFetch(res) 
+    DBI::dbClearResult(res)
     tableName <- base::paste(state, "_", county, "_", geoid, "_ws_", suffix, "_", sep = "")
   }# endIF/ELSE
 
@@ -95,10 +95,10 @@ all_coor_ws_2_pgdb <- function(ghcnd, geoid, type, suffix) {
   tableName      <- base::paste(varTable, type, sep = "")
   tableName	     <-  gsub(" ", "_", tableName)
   
-  if (RPostgreSQL::dbExistsTable(conn, tableName)) {
+  if (DBI::dbExistsTable(conn, tableName)) {
 
     print(base::paste("Done -Table ", tableName, " exists.\t\t\t\t\t", sep = "" ))
-    RPostgreSQL::dbDisconnect(conn)
+    DBI::dbDisconnect(conn)
     return(tableName)
 
   } else {
@@ -118,6 +118,6 @@ all_coor_ws_2_pgdb <- function(ghcnd, geoid, type, suffix) {
     rpostgis::pgInsert(conn, name = c("public", tableName), data.obj = spdf, geom = "geom")
     print("Done! check Postgresql table.")
   }# endIF/ELSE
-  RPostgreSQL::dbDisconnect(conn)
+  DBI::dbDisconnect(conn)
   return(tableName)
 }# endFUNCTION
