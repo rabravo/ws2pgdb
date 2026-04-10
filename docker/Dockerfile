@@ -33,4 +33,4 @@ RUN wget https://download.osgeo.org/postgis/source/postgis-3.5.2.tar.gz && \
 RUN echo "shared_preload_libraries = 'plr,postgis-3'" >> /usr/share/postgresql/postgresql.conf.sample
 
 # Copy the initialization script to the proper directory
-COPY --chmod=755 docker/init-db.sh /docker-entrypoint-initdb.d/init-db.sh
+COPY --chmod=755 init-db.sh /docker-entrypoint-initdb.d/init-db.sh
