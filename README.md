@@ -30,3 +30,10 @@ The following function enables the communication between the vector-borne simula
 
 Copy, paste, and execute the queries found in sql/functions.sql on the pgsql server.
 
+#About Docker files
+There has been an update where sql/functions.sql will be loaded in the container. No need to do nothing but running the dockerfile and create the image and run container
+
+docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -d  postgis-plr:3.5.2
+docker exec -it pg-gis-plr psql -U postgres
+
+
