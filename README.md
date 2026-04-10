@@ -35,10 +35,24 @@ There has been an update where sql/functions.sql will be loaded in the container
 
 docker rm -f pg-gis-plr
 docker build -t postgis-plr:3.5.2 docker/
-docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -d postgis-plr:3.5.2
+docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgis-plr:3.5.2
 docker logs pg-gis-plr
 docker exec -it pg-gis-plr psql -U postgres
 docker stop pg-gis-plr
 docker start pg-gis-plr
+
+#Loading Shapefiles into the container
+
+With the port exposed (-p 5432:5432), shp2pgsql can be run locally and piped directly into the container.
+First, convert the shapefile to SQL, then load it into the database:
+
+shp2pgsql -s 4269 -W UTF-8 tl_2010_48113_tract10.shp tl_2010_48113_tract10 us_gisdb > tl_2010_48113_tract10.sql
+psql -h localhost -p 5432 -U postgres -f tl_2010_48113_tract10.sql
+
+Or pipe directly in one step:
+
+shp2pgsql -s 4269 -W UTF-8 tl_2010_48113_tract10.shp tl_2010_48113_tract10 us_gisdb | psql -h localhost -p 5432 -U postgres
+
+The SRID (e.g. 4269) can be found by opening the .prj file of your shapefile and pasting its content into https://spatialreference.org.
 
 

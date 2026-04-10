@@ -7,6 +7,8 @@ FUNCTIONS_URL="https://raw.githubusercontent.com/rabravo/ws2pgdb/master/sql/func
 psql --username "${PGUSER:-postgres}" --dbname "${PGDATABASE:-postgres}" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS postgis;
     CREATE EXTENSION IF NOT EXISTS plr;
+    CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+    CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
 EOSQL
 
 # Fetch and load custom SQL functions (requires PostGIS + PLR)
