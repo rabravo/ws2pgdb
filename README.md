@@ -30,4 +30,3 @@ The following function enables the communication between the vector-borne simula
 
 Copy, paste, and execute the queries found in sql/functions.sql on the pgsql server.
 
-```
