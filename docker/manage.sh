@@ -4,22 +4,29 @@ IMAGE_NAME="postgis-plr:3.5.2"
 CONTAINER_NAME="pg-gis-plr"
 DB_PASSWORD="mysecretpassword"
 DB_PORT="5432"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 show_menu() {
     echo ""
     echo "==============================="
     echo "   pg-gis-plr Docker Manager   "
     echo "==============================="
-    echo "1) Rebuild image"
-    echo "2) Create container"
-    echo "3) Start container"
-    echo "4) Stop container"
-    echo "5) Recreate container (stop + rm + create)"
-    echo "6) Show container logs"
-    echo "7) Connect to database (psql)"
-    echo "8) Exit"
+    echo "1) Fetch latest from GitHub"
+    echo "2) Rebuild image"
+    echo "3) Create container"
+    echo "4) Start container"
+    echo "5) Stop container"
+    echo "6) Recreate container (stop + rm + create)"
+    echo "7) Show container logs"
+    echo "8) Connect to database (psql)"
+    echo "9) Exit"
     echo "==============================="
     echo -n "Select an option: "
+}
+
+fetch_project() {
+    echo "Fetching latest from GitHub..."
+    git -C "$REPO_DIR" pull
 }
 
 rebuild_image() {
@@ -66,14 +73,15 @@ while true; do
     show_menu
     read -r option
     case $option in
-        1) rebuild_image ;;
-        2) create_container ;;
-        3) start_container ;;
-        4) stop_container ;;
-        5) recreate_container ;;
-        6) show_logs ;;
-        7) connect_db ;;
-        8) echo "Bye!" ; exit 0 ;;
+        1) fetch_project ;;
+        2) rebuild_image ;;
+        3) create_container ;;
+        4) start_container ;;
+        5) stop_container ;;
+        6) recreate_container ;;
+        7) show_logs ;;
+        8) connect_db ;;
+        9) echo "Bye!" ; exit 0 ;;
         *) echo "Invalid option, try again." ;;
     esac
 done
