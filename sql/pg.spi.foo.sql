@@ -756,11 +756,10 @@ $BODY$
 -- ------------------------------------------------------------
 -- r_version() — no RPostgres, unchanged
 -- ------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.r_version();
 CREATE OR REPLACE FUNCTION public.r_version()
-  RETURNS SETOF text AS
+  RETURNS SETOF r_version_type AS
 $BODY$
-  cbind(names(version), unlist(version))
+  cbind(names(version),unlist(version))
 $BODY$
   LANGUAGE plr;
 
