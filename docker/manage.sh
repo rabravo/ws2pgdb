@@ -19,7 +19,8 @@ show_menu() {
     echo "6) Recreate container (stop + rm + create)"
     echo "7) Show container logs"
     echo "8) Connect to database (psql)"
-    echo "9) Exit"
+    echo "9) Load county tracts by FIPS"
+    echo "10) Exit"
     echo "==============================="
     echo -n "Select an option: "
 }
@@ -69,6 +70,17 @@ connect_db() {
     docker exec -it "$CONTAINER_NAME" psql -U postgres
 }
 
+load_county_tracts() {
+    echo -n "Enter 5-digit county FIPS code (e.g. 48061 for Cameron TX, 26161 for Washtenaw MI): "
+    read -r fips
+    if [[ ! "$fips" =~ ^[0-9]{5}$ ]]; then
+        echo "Invalid FIPS code. Must be exactly 5 digits."
+        return
+    fi
+    echo "Loading county tracts for FIPS $fips..."
+    docker exec -it "$CONTAINER_NAME" psql -U postgres -c "SELECT load_county_tracts('$fips');"
+}
+
 while true; do
     show_menu
     read -r option
@@ -81,7 +93,8 @@ while true; do
         6) recreate_container ;;
         7) show_logs ;;
         8) connect_db ;;
-        9) echo "Bye!" ; exit 0 ;;
+        9) load_county_tracts ;;
+        10) echo "Bye!" ; exit 0 ;;
         *) echo "Invalid option, try again." ;;
     esac
 done
