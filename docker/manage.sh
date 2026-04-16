@@ -71,7 +71,7 @@ connect_db() {
 }
 
 load_county_tracts() {
-    echo -n "Enter 5-digit county FIPS code (e.g. 48061 for Cameron TX, 26161 for Washtenaw MI): "
+    echo -n "Enter 5-digit county FIPS code (e.g. 48061 for Cameron TX, 26125 for Oakland MI): "
     read -r fips
     if [[ ! "$fips" =~ ^[0-9]{5}$ ]]; then
         echo "Invalid FIPS code. Must be exactly 5 digits."
