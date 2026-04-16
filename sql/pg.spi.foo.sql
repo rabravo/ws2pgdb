@@ -48,7 +48,7 @@ RETURNS TEXT AS $$
   # Load statewide shapefile into staging table via ogr2ogr
   ogr_result <- base::system2("/usr/bin/ogr2ogr", args = c(
     "-f", "PostgreSQL",
-    "PG:host=/var/run/postgresql user=postgres dbname=us_gis",
+    "postgresql://postgres@/us_gis?host=/var/run/postgresql",
     shp_path,
     "-nln", staging_tbl,
     "-nlt", "MULTIPOLYGON",
@@ -362,7 +362,7 @@ $BODY$
 
     base::system2("ogr2ogr", args = c(
       "-f", "PostgreSQL",
-      "PG:host=/var/run/postgresql user=postgres dbname=us_gis",
+      "postgresql://postgres@/us_gis?host=/var/run/postgresql",
       shp_path,
       "-nln", stg_tbl,
       "-nlt", "MULTIPOLYGON",
