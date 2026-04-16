@@ -46,14 +46,17 @@ RETURNS TEXT AS $$
   utils::unzip(zip_path, exdir = dir_path)
 
   # Load statewide shapefile into staging table via ogr2ogr
-  base::system2("ogr2ogr", args = c(
+  ogr_result <- base::system2("/usr/bin/ogr2ogr", args = c(
     "-f", "PostgreSQL",
     "PG:host=/var/run/postgresql user=postgres dbname=us_gis",
     shp_path,
     "-nln", staging_tbl,
     "-nlt", "MULTIPOLYGON",
     "-overwrite"
-  ))
+  ), stdout = TRUE, stderr = TRUE)
+  if (!is.null(attr(ogr_result, "status")) && attr(ogr_result, "status") != 0) {
+    stop(paste("ogr2ogr failed:", paste(ogr_result, collapse = "\n")))
+  }
 
   # Create county table and drop staging
   pg.spi.exec(paste0("DROP TABLE IF EXISTS ", county_tbl))
