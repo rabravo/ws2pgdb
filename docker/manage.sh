@@ -39,6 +39,7 @@ create_container() {
     echo "Creating container $CONTAINER_NAME..."
     docker run --name "$CONTAINER_NAME" \
         -e POSTGRES_PASSWORD="$DB_PASSWORD" \
+        -e NOAA_TOKEN="$NOAA_TOKEN" \
         -p "$DB_PORT":5432 \
         -d "$IMAGE_NAME"
 }
