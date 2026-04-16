@@ -40,9 +40,14 @@ RETURNS TEXT AS $$
   utils::unzip(zip_path, exdir = dir_path)
 
   # Load statewide shapefile into staging table via ogr2ogr
-  ogr_cmd <- paste0("ogr2ogr -f PostgreSQL \"PG:host=localhost user=postgres\" ",
-                    shp_path, " -nln ", staging_tbl, " -nlt MULTIPOLYGON -overwrite")
-  system(ogr_cmd)
+  base::system2("ogr2ogr", args = c(
+    "-f", "PostgreSQL",
+    "PG:host=localhost user=postgres",
+    shp_path,
+    "-nln", staging_tbl,
+    "-nlt", "MULTIPOLYGON",
+    "-overwrite"
+  ))
 
   # Create county table and drop staging
   pg.spi.exec(paste0("DROP TABLE IF EXISTS ", county_tbl))
@@ -346,9 +351,14 @@ $BODY$
 
     utils::unzip(zip_path, exdir = dir_path)
 
-    ogr_cmd <- paste0("ogr2ogr -f PostgreSQL \"PG:host=localhost user=postgres\" ",
-                      shp_path, " -nln ", stg_tbl, " -nlt MULTIPOLYGON -overwrite")
-    system(ogr_cmd)
+    base::system2("ogr2ogr", args = c(
+      "-f", "PostgreSQL",
+      "PG:host=localhost user=postgres",
+      shp_path,
+      "-nln", stg_tbl,
+      "-nlt", "MULTIPOLYGON",
+      "-overwrite"
+    ))
 
     pg.spi.exec(paste0("
       CREATE TABLE \"", pretableName, "\" AS
