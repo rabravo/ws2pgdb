@@ -7,9 +7,15 @@
 -- ============================================================
 
 
-CREATE TYPE all_coor_ws_type AS (id text, lon text, lat text);
+DO $$ BEGIN
+  CREATE TYPE all_coor_ws_type AS (id text, lon text, lat text);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE r_voronoi_type AS (id integer, polygon geometry);
+DO $$ BEGIN
+  CREATE TYPE r_voronoi_type AS (id integer, polygon geometry);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 
 -- ------------------------------------------------------------
@@ -750,6 +756,7 @@ $BODY$
 -- ------------------------------------------------------------
 -- r_version() — no RPostgres, unchanged
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.r_version();
 CREATE OR REPLACE FUNCTION public.r_version()
   RETURNS SETOF text AS
 $BODY$
