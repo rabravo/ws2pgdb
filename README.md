@@ -41,14 +41,25 @@ Copy, paste, and execute the queries found in `sql/pg.spi.foo.sql` on the pgsql 
 
 ## Docker Setup
 
-The `sql/pg.spi.foo.sql` functions are automatically loaded into the container on first run. No manual steps needed — just build the image and run the container.
+The `sql/pg.spi.foo.sql` functions are automatically loaded into the container on first run. No manual steps needed — just pull the image from Docker Hub and run the container.
 
-### Build and Run
+The image is available on Docker Hub at:
+[https://hub.docker.com/r/drabravo/pg-gis-plr](https://hub.docker.com/r/drabravo/pg-gis-plr)
+
+### Pull from Docker Hub (recommended)
+
+```bash
+docker pull drabravo/pg-gis-plr:latest
+docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d drabravo/pg-gis-plr:latest
+docker logs pg-gis-plr
+```
+
+### Build locally from source
 
 ```bash
 docker rm -f pg-gis-plr
-docker build -t postgis-plr:3.5.2 docker/
-docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgis-plr:3.5.2
+docker build -t drabravo/pg-gis-plr:3.5.2 docker/
+docker run --name pg-gis-plr -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d drabravo/pg-gis-plr:3.5.2
 docker logs pg-gis-plr
 ```
 
@@ -100,6 +111,19 @@ shp2pgsql -s 4269 -W UTF-8 tl_2010_48113_tract10.shp tl_2010_48113_tract10 us_gi
 ```
 
 The SRID (e.g. `4269`) can be found by opening the `.prj` file of your shapefile and pasting its content into https://spatialreference.org.
+
+## Visualizing GIS Data with QGIS
+
+[QGIS](https://qgis.org) is a free and open-source Geographic Information System that can connect directly to the `us_gis` PostgreSQL database to visualize spatial data such as county tracts, Voronoi tessellations, and weather station locations.
+
+Download QGIS at: https://qgis.org/download/
+
+To connect QGIS to the container:
+1. Open QGIS
+2. In the **Browser panel**, right-click **PostgreSQL** → **New Connection**
+3. Enter the connection details below
+4. Click **Test Connection** then **OK**
+5. Browse and drag layers into the map canvas
 
 ## Client Connection Details
 

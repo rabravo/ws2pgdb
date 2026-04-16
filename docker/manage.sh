@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE_NAME="postgis-plr:3.5.2"
+IMAGE_NAME="drabravo/pg-gis-plr:3.5.2"
 CONTAINER_NAME="pg-gis-plr"
 DB_PASSWORD="mysecretpassword"
 DB_PORT="5432"
