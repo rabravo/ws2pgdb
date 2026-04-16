@@ -67,7 +67,7 @@ show_logs() {
 
 connect_db() {
     echo "Connecting to database..."
-    docker exec -it "$CONTAINER_NAME" psql -U postgres
+    docker exec -it "$CONTAINER_NAME" psql -U postgres -d us_gis
 }
 
 load_county_tracts() {
@@ -78,7 +78,7 @@ load_county_tracts() {
         return
     fi
     echo "Loading county tracts for FIPS $fips..."
-    docker exec -it "$CONTAINER_NAME" psql -U postgres -c "SELECT load_county_tracts('$fips');"
+    docker exec -it "$CONTAINER_NAME" psql -U postgres -d us_gis -c "SELECT load_county_tracts('$fips');"
 }
 
 while true; do

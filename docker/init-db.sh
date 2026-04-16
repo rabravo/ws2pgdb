@@ -2,9 +2,15 @@
 set -e
 
 FUNCTIONS_URL="https://raw.githubusercontent.com/rabravo/ws2pgdb/master/sql/pg.spi.foo.sql"
+DB_NAME="us_gis"
 
-# Create extensions for the default database
-psql --username "${PGUSER:-postgres}" --dbname "${PGDATABASE:-postgres}" <<-EOSQL
+# Create the us_gis database
+psql --username "${PGUSER:-postgres}" <<-EOSQL
+    CREATE DATABASE $DB_NAME;
+EOSQL
+
+# Create extensions in us_gis
+psql --username "${PGUSER:-postgres}" --dbname "$DB_NAME" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS postgis;
     CREATE EXTENSION IF NOT EXISTS plr;
     CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
@@ -14,5 +20,5 @@ EOSQL
 # Fetch and load custom SQL functions (requires PostGIS + PLR)
 echo "Fetching SQL functions from GitHub..."
 wget -q -O /tmp/pg.spi.foo.sql "$FUNCTIONS_URL"
-psql --username "${PGUSER:-postgres}" --dbname "${PGDATABASE:-postgres}" -f /tmp/pg.spi.foo.sql
+psql --username "${PGUSER:-postgres}" --dbname "$DB_NAME" -f /tmp/pg.spi.foo.sql
 echo "SQL functions loaded successfully."
