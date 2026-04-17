@@ -125,6 +125,35 @@ To connect QGIS to the container:
 4. Click **Test Connection** then **OK**
 5. Browse and drag layers into the map canvas
 
+## NOAA Configuration (pg_config.yml)
+
+Several R functions in this package retrieve weather data from NOAA via the `rnoaa` package. They expect a YAML configuration file named `pg_config.yml` in the user's home directory (`~/pg_config.yml`).
+
+A template is provided at `docker/pg_config.yml`. Copy it to your home directory and fill in your credentials:
+
+```bash
+cp docker/pg_config.yml ~/pg_config.yml
+```
+
+Edit `~/pg_config.yml` with your values:
+
+```yaml
+dbhost: localhost
+dbport: 5432
+dbname: us_gis
+dbuser: postgres
+dbpwd: mysecretpassword
+token: <your_noaa_token>
+```
+
+To obtain a NOAA API token, register at: https://www.ncdc.noaa.gov/cdo-web/token
+
+If you are running R functions **inside the container**, copy the file into it using option **10** in `manage.sh`, or manually:
+
+```bash
+docker cp ~/pg_config.yml pg-gis-plr:/root/pg_config.yml
+```
+
 ## Client Connection Details
 
 | Parameter | Value |

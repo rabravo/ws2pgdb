@@ -20,7 +20,8 @@ show_menu() {
     echo "7) Show container logs"
     echo "8) Connect to database (psql)"
     echo "9) Load county tracts by FIPS"
-    echo "10) Exit"
+    echo "10) Copy pg_config.yml into container"
+    echo "11) Exit"
     echo "==============================="
     echo -n "Select an option: "
 }
@@ -71,6 +72,18 @@ connect_db() {
     docker exec -it "$CONTAINER_NAME" psql -U postgres -d us_gis
 }
 
+copy_pg_config() {
+    local src="$REPO_DIR/docker/pg_config.yml"
+    if [[ ! -f "$src" ]]; then
+        echo "File not found: $src"
+        echo "Create it first using docker/pg_config.yml as a template."
+        return
+    fi
+    echo "Copying $src into container at /root/pg_config.yml..."
+    docker cp "$src" "$CONTAINER_NAME":/root/pg_config.yml
+    echo "Done."
+}
+
 load_county_tracts() {
     echo -n "Enter 5-digit county FIPS code (e.g. 48061 for Cameron TX, 26125 for Oakland MI): "
     read -r fips
@@ -95,7 +108,8 @@ while true; do
         7) show_logs ;;
         8) connect_db ;;
         9) load_county_tracts ;;
-        10) echo "Bye!" ; exit 0 ;;
+        10) copy_pg_config ;;
+        11) echo "Bye!" ; exit 0 ;;
         *) echo "Invalid option, try again." ;;
     esac
 done

@@ -1,0 +1,6 @@
+dbhost: localhost
+dbport: 5432
+dbname: us_gis
+dbuser: postgres
+dbpwd: mysecretpassword
+token: <your_noaa_token>
