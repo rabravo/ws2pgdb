@@ -49,11 +49,17 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev && \
     apt-get clean
 
-# Install remotes, rnoaa (archived from CRAN, must use GitHub), and ws2pgdb
-RUN apt-get update && apt-get install -y libgit2-dev && apt-get clean && \
-    R -e "install.packages('remotes', repos='https://cloud.r-project.org')" && \
-    R -e "remotes::install_github('ropensci/rnoaa')" && \
-    R -e "remotes::install_github('rabravo/ws2pgdb')"
+# Install system dependency for remotes
+RUN apt-get update && apt-get install -y libgit2-dev && apt-get clean
+
+# Install remotes from CRAN
+RUN R -e "install.packages('remotes', repos='https://cloud.r-project.org')"
+
+# Install rnoaa from GitHub (archived from CRAN)
+RUN R -e "remotes::install_github('ropensci/rnoaa')"
+
+# Install ws2pgdb from GitHub
+RUN R -e "remotes::install_github('rabravo/ws2pgdb')"
 
 # Copy the initialization script to the proper directory
 COPY --chmod=755 init-db.sh /docker-entrypoint-initdb.d/init-db.sh
