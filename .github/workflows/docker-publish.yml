@@ -11,6 +11,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -25,3 +28,5 @@ jobs:
           tags: |
             drabravo/pg-gis-plr:latest
             drabravo/pg-gis-plr:3.5.2
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
