@@ -3,6 +3,10 @@ name: Build and Push to Docker Hub
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'docker/Dockerfile'
+      - 'docker/init-db.sh'
+      - 'sql/pg.spi.foo.sql'
 
 jobs:
   build-and-push:
