@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-FUNCTIONS_URL="https://raw.githubusercontent.com/rabravo/ws2pgdb/master/sql/pg.spi.foo.sql"
+FUNCTIONS_URL="https://raw.githubusercontent.com/rabravo/ws2pgdb/main/sql/pg.spi.foo.sql"
 DB_NAME="us_gis"
 
 # Create the us_gis database
