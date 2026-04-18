@@ -4,6 +4,25 @@ Package contains several functions that retrieve, filter, and store NOAA data in
 One useful function takes weather station locations in a region and constructs a Voronoi tessellation over that region (you will need a GIS software to visualize the output which is a set of geometries/polygons).
 Another useful function iteratively requests several years of data from the NOAA digital warehouse. Since NOAA permits only one year of data requested at a time via the rnoaa package, it is particularly useful when many years of information are needed.
 
+## Prerequisites
+
+### Database + PL/R functions only
+If you only need the PostgreSQL database with PostGIS and PL/R functions running inside a container, the only requirement is:
+
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** — available for macOS, Windows, and Linux
+
+Everything else (PostgreSQL, PostGIS, PL/R, R, GDAL) is bundled inside the container image.
+
+### R package (local usage)
+If you also want to run the R functions in this package outside the container:
+
+- **R** (≥ 3.4.0) — https://www.r-project.org
+- **System libraries** — `libgdal`, `libproj`, `libgeos` (see the **Problems** section below for installation instructions)
+- **NOAA API token** — required for weather data retrieval (see [NOAA Configuration](#noaa-configuration-pg_configyml))
+
+### Optional
+- **[QGIS](https://qgis.org/download/)** — to visualize spatial data (county tracts, Voronoi tessellations, weather station locations) stored in the database
+
 ## Problems
 
 Some system libraries are needed before you can start using ws2pgdb. Some of the methods necessitate the octave development tools, gdal, proj (`octave-dev`, `liboctave`, `libgdal`, `libproj-dev`). Try to install ws2pgdb and the installer will let you know when a library is needed. This may be a slow process but if you are using any Debian-like system, you can make use of the package manager:
