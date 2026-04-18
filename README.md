@@ -127,7 +127,7 @@ To connect QGIS to the container:
 
 ## NOAA Configuration (pg_config.yml)
 
-Several R functions in this package retrieve weather data from NOAA via the `rnoaa` package. They expect a YAML configuration file named `pg_config.yml` in the user's home directory (`~/pg_config.yml`).
+Several R functions in this package retrieve weather data from NOAA via the `rnoaa` package. They expect a YAML configuration file named `pg_config.yml` in the user's home directory — `~/pg_config.yml` on the local machine, or `/root/pg_config.yml` inside the container.
 
 A template is provided at `docker/pg_config.yml`. Copy it to `~/.docker/pg_config.yml` and fill in your NOAA token:
 
