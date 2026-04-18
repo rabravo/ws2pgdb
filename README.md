@@ -129,13 +129,14 @@ To connect QGIS to the container:
 
 Several R functions in this package retrieve weather data from NOAA via the `rnoaa` package. They expect a YAML configuration file named `pg_config.yml` in the user's home directory (`~/pg_config.yml`).
 
-A template is provided at `docker/pg_config.yml`. Copy it to your home directory and fill in your credentials:
+A template is provided at `docker/pg_config.yml`. Copy it to `~/.docker/pg_config.yml` and fill in your NOAA token:
 
 ```bash
-cp docker/pg_config.yml ~/pg_config.yml
+mkdir -p ~/.docker
+cp docker/pg_config.yml ~/.docker/pg_config.yml
 ```
 
-Edit `~/pg_config.yml` with your values:
+Edit `~/.docker/pg_config.yml` with your values:
 
 ```yaml
 dbhost: localhost
@@ -148,10 +149,12 @@ token: <your_noaa_token>
 
 To obtain a NOAA API token, register at: https://www.ncdc.noaa.gov/cdo-web/token
 
-If you are running R functions **inside the container**, copy the file into it using option **10** in `manage.sh`, or manually:
+The file lives at `~/.docker/pg_config.yml` — outside the repository — so your token is never at risk of being accidentally committed. The `docker/pg_config.yml` in the repo is a placeholder template only.
+
+To copy your config into the running container use option **11** in `manage.sh`, or manually:
 
 ```bash
-docker cp ~/pg_config.yml pg-gis-plr:/root/pg_config.yml
+docker cp ~/.docker/pg_config.yml pg-gis-plr:/root/pg_config.yml
 ```
 
 ## Client Connection Details

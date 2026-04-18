@@ -79,10 +79,10 @@ pull_image() {
 }
 
 copy_pg_config() {
-    local src="$REPO_DIR/docker/pg_config.yml"
+    local src="$HOME/.docker/pg_config.yml"
     if [[ ! -f "$src" ]]; then
         echo "File not found: $src"
-        echo "Create it first using docker/pg_config.yml as a template."
+        echo "Copy docker/pg_config.yml to ~/.docker/pg_config.yml and fill in your NOAA token."
         return
     fi
     echo "Copying $src into container at /root/pg_config.yml..."
