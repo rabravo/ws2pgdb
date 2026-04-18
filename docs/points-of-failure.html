@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ws2pgdb — Points of Failure</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f6f8fa;
+      color: #24292f;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid #d0d7de;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      margin-top: 2.5rem;
+      color: #0969da;
+    }
+    .subtitle {
+      color: #57606a;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .diagram-box {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .diagram-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #57606a;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    th {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+    td {
+      border: 1px solid #d0d7de;
+      padding: 0.5rem 0.75rem;
+      vertical-align: top;
+    }
+    code {
+      background: #eaeef2;
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 0.88em;
+    }
+    .safe-box {
+      background: #dafbe1;
+      border: 1px solid #2da44e;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      margin-top: 1.5rem;
+    }
+    .safe-box strong { display: block; margin-bottom: 0.4rem; color: #1a7f37; }
+    .warn-box {
+      background: #fff8c5;
+      border: 1px solid #d4a72c;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    .warn-box strong { display: block; margin-bottom: 0.4rem; }
+  </style>
+</head>
+<body>
+
+  <h1>ws2pgdb — Points of Failure</h1>
+  <p class="subtitle">
+    What breaks, when, and why — comparing the safe path (commit first)
+    against the dangerous shortcut (push to Docker Hub directly).
+  </p>
+
+  <!-- DIAGRAM 1: Safe path -->
+  <h2>✅ Safe Path — Commit to GitHub first</h2>
+  <div class="diagram-box">
+    <div class="diagram-label">Sequence Diagram — Correct Order</div>
+    <div class="mermaid">
+sequenceDiagram
+    actor Dev as 👨‍💻 Developer
+    participant GH  as 🐙 GitHub
+    participant GHA as ⚙️ GitHub Actions
+    participant DH  as 🐳 Docker Hub
+
+    Dev->>GH: 1. git commit + push to main
+    Note over GH: Source of truth updated ✅
+    GH->>GHA: 2. Trigger workflow<br/>(path filter matched)
+    GHA->>GH: 3. Checkout — pulls pg.spi.foo.sql<br/>and ws2pgdb from same commit ✅
+    GHA->>GHA: 4. docker build<br/>(all sources in sync)
+    GHA->>DH: 5. docker push :latest :3.5.2
+    Note over DH: Image matches source ✅
+    Dev->>DH: 6. manage.sh option 10 — docker pull
+    Dev->>Dev: 7. manage.sh option 6 — recreate container
+    Note over Dev: Container runs exactly what GitHub has ✅
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: Dangerous path -->
+  <h2>❌ Dangerous Path — Push to Docker Hub before committing</h2>
+  <div class="diagram-box">
+    <div class="diagram-label">Sequence Diagram — Wrong Order</div>
+    <div class="mermaid">
+sequenceDiagram
+    actor Dev  as 👨‍💻 Developer
+    actor Dev2 as 👩‍💻 Another Developer
+    participant GH  as 🐙 GitHub<br/>(stale)
+    participant DH  as 🐳 Docker Hub
+
+    Dev->>Dev: docker build locally
+    Dev->>DH: docker push :latest ⚠️
+    Note over DH: Image pushed but GitHub NOT updated ❌
+
+    Dev->>Dev: (forgets to commit) 😬
+
+    Note over GH: GitHub still has OLD code
+
+    Dev2->>GH: git clone rabravo/ws2pgdb
+    Dev2->>Dev2: docker build
+    Note over Dev2: Builds OLD image — different from Docker Hub ❌
+
+    Dev->>Dev: Start fresh container from Docker Hub image
+    Dev->>DH: docker pull :latest
+    Note over Dev: Container starts — init-db.sh fetches<br/>pg.spi.foo.sql from GitHub (OLD version) ❌
+    Note over Dev: 💥 Image and SQL functions are out of sync
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: init-db.sh specific failure -->
+  <h2>💥 Failure Detail — init-db.sh fetches SQL from GitHub at runtime</h2>
+  <div class="diagram-box">
+    <div class="diagram-label">Sequence Diagram — Runtime SQL Mismatch</div>
+    <div class="mermaid">
+sequenceDiagram
+    participant CTR as 🐳 Container<br/>(starting up)
+    participant GH  as 🐙 GitHub<br/>raw content
+
+    Note over CTR: init-db.sh runs on first start
+    CTR->>CTR: CREATE DATABASE us_gis
+    CTR->>CTR: CREATE EXTENSION postgis, plr...
+    CTR->>GH: wget raw.githubusercontent.com/.../main/sql/pg.spi.foo.sql
+    Note over GH: Returns whatever is on main RIGHT NOW
+
+    alt SQL committed to GitHub before image push ✅
+        GH-->>CTR: Latest pg.spi.foo.sql ✅
+        CTR->>CTR: Functions loaded correctly ✅
+    else SQL NOT committed — image pushed first ❌
+        GH-->>CTR: OLD pg.spi.foo.sql ❌
+        CTR->>CTR: 💥 Old functions loaded<br/>New image, old SQL — silent mismatch
+        Note over CTR: No error thrown — just wrong behavior
+    end
+    </div>
+  </div>
+
+  <!-- DIAGRAM 4: R package failure -->
+  <h2>💥 Failure Detail — ws2pgdb R package installed from GitHub at build time</h2>
+  <div class="diagram-box">
+    <div class="diagram-label">Sequence Diagram — Stale R Package in Image</div>
+    <div class="mermaid">
+sequenceDiagram
+    participant GHA as ⚙️ GitHub Actions<br/>Build
+    participant GH  as 🐙 GitHub<br/>rabravo/ws2pgdb
+    participant DH  as 🐳 Docker Hub
+
+    GHA->>GHA: RUN remotes::install_github('rabravo/ws2pgdb')
+    GHA->>GH: Fetch ws2pgdb source
+
+    alt R changes committed to GitHub ✅
+        GH-->>GHA: Latest ws2pgdb ✅
+        GHA->>DH: Push image with latest R package ✅
+    else R changes NOT committed ❌
+        GH-->>GHA: OLD ws2pgdb source ❌
+        GHA->>DH: Push image — R package is stale ❌
+        Note over DH: Image looks new but runs old R code 💥
+    end
+    </div>
+  </div>
+
+  <!-- Summary table -->
+  <h2>Summary — What breaks and why</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Failure</th>
+        <th>Trigger</th>
+        <th>Visible?</th>
+        <th>Fix</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Image and GitHub source out of sync</td>
+        <td>Manual <code>docker push</code> before <code>git push</code></td>
+        <td>No — silent</td>
+        <td>Always commit first</td>
+      </tr>
+      <tr>
+        <td>Container loads stale SQL functions</td>
+        <td><code>init-db.sh</code> fetches <code>pg.spi.foo.sql</code> from GitHub at startup; GitHub not updated yet</td>
+        <td>No — wrong behavior, no error</td>
+        <td>Commit <code>pg.spi.foo.sql</code> before pushing image</td>
+      </tr>
+      <tr>
+        <td>R package in image is stale</td>
+        <td><code>remotes::install_github</code> in Dockerfile pulls from GitHub; R changes not committed</td>
+        <td>No — silent wrong results</td>
+        <td>Commit R changes before triggering build</td>
+      </tr>
+      <tr>
+        <td>Two developers build different images</td>
+        <td>GitHub has old code; Docker Hub has new image</td>
+        <td>Yes — reproducibility broken</td>
+        <td>GitHub commit is the single source of truth</td>
+      </tr>
+      <tr>
+        <td>GitHub Actions overwrites manual push</td>
+        <td>Next push touching <code>Dockerfile</code> triggers Actions, rebuilds from GitHub state</td>
+        <td>Yes — manual image lost</td>
+        <td>Never push images manually</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="safe-box">
+    <strong>✅ The Golden Rule</strong>
+    <code>git commit</code> → <code>git push origin main</code> → GitHub Actions builds → <code>manage.sh option 10</code> pulls.<br/>
+    GitHub is the source of truth. Docker Hub is its compiled output. Never reverse that order.
+  </div>
+
+  <div class="warn-box">
+    <strong>⚠️ The sneakiest failure</strong>
+    The <code>init-db.sh</code> SQL mismatch produces <strong>no error</strong> — the container starts cleanly,
+    extensions load, but the PL/R functions running inside PostgreSQL are from the old version.
+    You would only discover this by testing function behavior, not by reading logs.
+  </div>
+
+</body>
+</html>

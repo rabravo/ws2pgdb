@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ws2pgdb — CI/CD Workflow</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f6f8fa;
+      color: #24292f;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid #d0d7de;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      margin-top: 2.5rem;
+      color: #0969da;
+    }
+    .subtitle {
+      color: #57606a;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .diagram-box {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .note-box {
+      background: #fff8c5;
+      border: 1px solid #d4a72c;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      margin-top: 1.5rem;
+    }
+    .note-box strong {
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    th {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+    td {
+      border: 1px solid #d0d7de;
+      padding: 0.5rem 0.75rem;
+      vertical-align: top;
+    }
+    code {
+      background: #eaeef2;
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 0.88em;
+    }
+    .green  { color: #1a7f37; font-weight: bold; }
+    .red    { color: #cf222e; font-weight: bold; }
+    .blue   { color: #0969da; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>ws2pgdb — CI/CD Workflow</h1>
+  <p class="subtitle">
+    How local development, GitHub, GitHub Actions, and Docker Hub coordinate
+    to build and publish <code>drabravo/pg-gis-plr</code>.
+  </p>
+
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    actor Dev as 👨‍💻 Developer<br/>(local)
+    participant GH  as 🐙 GitHub<br/>rabravo/ws2pgdb
+    participant GHA as ⚙️ GitHub Actions<br/>Runner (ubuntu)
+    participant GHC as 🗄️ GitHub<br/>Actions Cache
+    participant DH  as 🐳 Docker Hub<br/>drabravo/pg-gis-plr
+
+    Dev->>GH: git push origin main
+
+    GH->>GH: Check path filters<br/>(Dockerfile / init-db.sh / pg.spi.foo.sql)
+
+    alt No matching paths changed
+        GH-->>Dev: ⏭️ Workflow skipped — no rebuild needed
+    else Matching path changed
+        GH->>GHA: Trigger workflow run
+
+        GHA->>GH: Checkout repository
+
+        GHA->>GHC: Request cached Docker layers
+        alt Cache hit (layers unchanged)
+            GHC-->>GHA: ✅ Return cached layers
+        else Cache miss (new/changed layers)
+            GHC-->>GHA: ❌ No cache — build from scratch
+            GHA->>GHA: Build layer<br/>(apt / PostGIS / R / rnoaa / ws2pgdb)
+            GHA->>GHC: Store new layers in cache
+        end
+
+        GHA->>DH: docker push<br/>:latest  :3.5.2
+        DH-->>GHA: ✅ Push confirmed
+
+        GHA-->>GH: Workflow complete ✅
+        GH-->>Dev: Actions notification (email / UI)
+
+        Dev->>Dev: manage.sh → option 10
+        Dev->>DH: docker pull drabravo/pg-gis-plr:latest
+        DH-->>Dev: Updated image
+        Dev->>Dev: manage.sh → option 6<br/>Recreate container
+    end
+    </div>
+  </div>
+
+  <h2>Path Filters — What triggers a rebuild?</h2>
+  <p>
+    The workflow only fires when a push to <code>main</code> touches at least
+    one of these files:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Why it triggers a rebuild</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>docker/Dockerfile</code></td>
+        <td>The image recipe itself — any change here changes one or more layers.</td>
+      </tr>
+      <tr>
+        <td><code>docker/init-db.sh</code></td>
+        <td>
+          Baked into the image via <code>COPY</code>. Changes here affect the
+          layer that seeds the database on first container run.
+        </td>
+      </tr>
+      <tr>
+        <td><code>sql/pg.spi.foo.sql</code></td>
+        <td>
+          Fetched by <code>init-db.sh</code> at container startup from GitHub raw URL.
+          Technically does <em>not</em> need an image rebuild (it's downloaded at runtime),
+          but including it here ensures the published image is always tested against
+          the latest SQL functions.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table style="margin-top:1rem;">
+    <thead>
+      <tr>
+        <th>File changed</th>
+        <th>Rebuild triggered?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>docker/Dockerfile</code></td>        <td class="green">✅ Yes</td></tr>
+      <tr><td><code>docker/init-db.sh</code></td>        <td class="green">✅ Yes</td></tr>
+      <tr><td><code>sql/pg.spi.foo.sql</code></td>       <td class="green">✅ Yes</td></tr>
+      <tr><td><code>docker/manage.sh</code></td>         <td class="red">⏭️ No</td></tr>
+      <tr><td><code>README.md</code></td>                <td class="red">⏭️ No</td></tr>
+      <tr><td><code>R/all_coor_ws.R</code></td>          <td class="red">⏭️ No — R package is installed from GitHub at build time</td></tr>
+      <tr><td><code>.github/workflows/docker-publish.yml</code></td><td class="red">⏭️ No</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note-box">
+    <strong>💡 Note on R package updates</strong>
+    Changing R source files under <code>R/</code> does <em>not</em> trigger a rebuild
+    because <code>ws2pgdb</code> is installed inside the container via
+    <code>remotes::install_github('rabravo/ws2pgdb')</code> at build time.
+    To pick up R changes you must push a change to <code>docker/Dockerfile</code>
+    (even a comment bump) to force the last Docker layer to rebuild,
+    or update the package in-place with
+    <code>docker exec -it pg-gis-plr R -e "remotes::install_github('rabravo/ws2pgdb')"</code>.
+  </div>
+
+</body>
+</html>
