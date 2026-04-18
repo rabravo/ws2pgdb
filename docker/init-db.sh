@@ -6,7 +6,7 @@ DB_NAME="us_gis"
 
 # Create the us_gis database
 psql --username "${PGUSER:-postgres}" <<-EOSQL
-    CREATE DATABASE $DB_NAME;
+    CREATE DATABASE IF NOT EXISTS $DB_NAME;
 EOSQL
 
 # Create extensions in us_gis
