@@ -235,7 +235,8 @@ $BODY$
 
 -- ------------------------------------------------------------
 -- r_create_midas_synth_hh_table(geoid)
--- Downloads and loads MIDAS synthetic household data.
+-- Downloads and loads FRED synthetic household data.
+-- Source: https://fred.publichealth.pitt.edu/syn_pops
 -- i.e. SELECT r_create_midas_synth_hh_table('12087')
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.r_create_midas_synth_hh_table(text)
@@ -254,30 +255,47 @@ $BODY$
   } else {
     pg.spi.exec(sprintf("SELECT r_create_synth_hh_table_template('%1$s')", tableName))
 
-    url           <- "http://www.epimodels.org/10_Midas_Docs/SynthPop/2010/counties/"
-    file          <- base::paste("2010_ver1_", geoid, sep = "")
-    pfile         <- base::paste("/tmp/2010_ver1_", geoid, sep = "")
-    zipFile       <- base::paste(pfile, ".zip", sep = "")
-    download      <- base::paste(url, file, ".zip", sep = "")
+    zipFile  <- base::paste("/tmp/", geoid, ".zip", sep = "")
+    download <- base::paste("https://fred.publichealth.pitt.edu/proj/populations/usa/", geoid, ".zip", sep = "")
 
     err <- try(utils::download.file(download, zipFile, method = "wget", quiet = TRUE))
     if (class(err) == "try-error") {
       return("")
     }
 
-    extractedFile <- base::paste(file, "_synth_households.txt", sep = "")
-    utils::unzip(zipFile, files = extractedFile, exdir = "/tmp")
+    hhFile     <- base::paste(geoid, "/households.txt", sep = "")
+    peopleFile <- base::paste(geoid, "/people.txt",     sep = "")
+    utils::unzip(zipFile, files = c(hhFile, peopleFile), exdir = "/tmp")
 
-    input       <- utils::read.csv(file = base::paste("/tmp/", extractedFile, sep = ""), head = TRUE, sep = ",")
-    out         <- input[c("stcotrbg", "hh_race", "hh_income", "hh_size", "hh_age", "longitude", "latitude")]
-    updatedFile <- base::paste(pfile, "_synth_hh.csv", sep = "")
+    # Load households — tab-separated, provides stcotrbg, hh_race, hh_income, latitude, longitude
+    households <- utils::read.delim(base::paste("/tmp/", hhFile, sep = ""), head = TRUE)
+
+    # Load people — tab-separated, used to derive hh_size and hh_age
+    people <- utils::read.delim(base::paste("/tmp/", peopleFile, sep = ""), head = TRUE)
+
+    # Derive hh_size: count persons per household
+    hh_size        <- aggregate(sp_id ~ sp_hh_id, data = people, FUN = length)
+    names(hh_size) <- c("sp_id", "hh_size")
+
+    # Derive hh_age: age of household reference person (relate == 0)
+    ref_person     <- people[people$relate == 0, c("sp_hh_id", "age")]
+    names(ref_person) <- c("sp_id", "hh_age")
+
+    # Join derived fields back to households
+    out <- merge(households, hh_size,   by = "sp_id", all.x = TRUE)
+    out <- merge(out,        ref_person, by = "sp_id", all.x = TRUE)
+
+    # Select and order columns to match table schema
+    out <- out[c("stcotrbg", "hh_race", "hh_income", "hh_size", "hh_age", "longitude", "latitude")]
+
+    updatedFile <- base::paste("/tmp/", geoid, "_synth_hh.csv", sep = "")
     utils::write.csv(out, file = updatedFile, row.names = FALSE)
 
     pg.spi.exec(sprintf("COPY \"%1$s\" FROM '%2$s' DELIMITER ',' CSV HEADER;", tableName, updatedFile))
 
     unlink(zipFile)
     unlink(updatedFile)
-    unlink(base::paste("/tmp/", extractedFile, sep = ""))
+    unlink(base::paste("/tmp/", geoid, sep = ""), recursive = TRUE)
 
     return(tableName)
   }
