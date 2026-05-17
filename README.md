@@ -185,3 +185,107 @@ docker cp ~/.docker/pg_config.yml pg-gis-plr:/root/pg_config.yml
 | Database | `us_gis` |
 | User | `postgres` |
 | Password | `mysecretpassword` |
+
+
+## Diagram showing where all fits together under a Docker container
+
+The diagram below illustrates how the R package, SQL functions, Docker container, and external data sources (NOAA, Census TIGER) interact. Click any node to navigate to its source file.
+
+```mermaid
+flowchart TD
+
+subgraph group_external["External sources"]
+  node_noaa(("NOAA<br/>remote API"))
+  node_census["TIGER shapefiles<br/>spatial source"]
+end
+
+subgraph group_r["R package"]
+  node_ws_pkg["ws2pgdb<br/>R package"]
+  node_meta_load["Metadata loaders<br/>R ingest"]
+  node_data_load["Data loaders<br/>R ingest"]
+  node_span_ops["Span batching<br/>R iterator"]
+  node_ingest_db["DB ingest<br/>R loader<br/>[df_2_pgdb.R]"]
+  node_spatial_ops["Spatial analysis<br/>R geoprocess<br/>[canopiVoronoi.R]"]
+  node_coords["Station coords<br/>R transform<br/>[all_coor_ws.R]"]
+  node_voronoi["Voronoi tools<br/>R geoprocess<br/>[createVoronoi.R]"]
+end
+
+subgraph group_db["Spatial database"]
+  node_db_image[("PostGIS image<br/>postgres runtime")]
+  node_db_sql["Stored functions<br/>SQL/PLpgSQL<br/>[functions.sql]"]
+  node_spi_sql["SPI bridge<br/>SQL/PLR helper<br/>[pg.spi.foo.sql]"]
+end
+
+subgraph group_infra["Container and delivery"]
+  node_db_init["Init script<br/>bootstrap<br/>[init-db.sh]"]
+  node_db_cfg["pg_config.yml<br/>[pg_config.yml]"]
+  node_manage["manage.sh<br/>ops script<br/>[manage.sh]"]
+  node_ci["Docker publish<br/>CI workflow<br/>[docker-publish.yml]"]
+end
+
+subgraph group_consumers["Consumers"]
+  node_qgis["QGIS<br/>GIS client"]
+end
+
+subgraph group_docs["Docs and sample"]
+  node_sample["Watts sample<br/>example data<br/>[Watts.rda]"]
+  node_workflow["Workflow docs<br/>documentation<br/>[workflow.html]"]
+end
+
+node_noaa -->|"station metadata"| node_meta_load
+node_noaa -->|"observations"| node_data_load
+node_span_ops -->|"batch requests"| node_noaa
+node_ws_pkg -->|"orchestrates"| node_meta_load
+node_ws_pkg -->|"orchestrates"| node_data_load
+node_ws_pkg -->|"coordinates"| node_spatial_ops
+node_meta_load -->|"load table"| node_ingest_db
+node_data_load -->|"load table"| node_ingest_db
+node_coords -->|"feeds"| node_voronoi
+node_spatial_ops -->|"derives"| node_coords
+node_spatial_ops -->|"computes"| node_voronoi
+node_census -->|"load boundaries"| node_db_image
+node_db_init -->|"bootstraps"| node_db_image
+node_db_sql -->|"installs"| node_db_image
+node_spi_sql -->|"installs"| node_db_image
+node_db_cfg -->|"configures"| node_ws_pkg
+node_db_cfg -->|"configures"| node_db_image
+node_manage -->|"manages"| node_db_image
+node_ci -->|"publishes"| node_db_image
+node_db_image -->|"serves GIS"| node_qgis
+node_sample -->|"example input"| node_ws_pkg
+node_workflow -->|"documents"| node_ws_pkg
+
+click node_ws_pkg "https://github.com/rabravo/ws2pgdb/tree/main/DESCRIPTION"
+click node_meta_load "https://github.com/rabravo/ws2pgdb/blob/main/R/ws_metadata_span_2_pgdb.R"
+click node_data_load "https://github.com/rabravo/ws2pgdb/blob/main/R/ws_data_avg_span_2_pgdb.R"
+click node_span_ops "https://github.com/rabravo/ws2pgdb/blob/main/R/ws_metadata_span_2_pgdb.R"
+click node_ingest_db "https://github.com/rabravo/ws2pgdb/blob/main/R/df_2_pgdb.R"
+click node_spatial_ops "https://github.com/rabravo/ws2pgdb/blob/main/R/canopiVoronoi.R"
+click node_coords "https://github.com/rabravo/ws2pgdb/blob/main/R/all_coor_ws.R"
+click node_voronoi "https://github.com/rabravo/ws2pgdb/blob/main/R/createVoronoi.R"
+click node_db_image "https://github.com/rabravo/ws2pgdb/tree/main/docker/Dockerfile"
+click node_db_sql "https://github.com/rabravo/ws2pgdb/blob/main/sql/functions.sql"
+click node_spi_sql "https://github.com/rabravo/ws2pgdb/blob/main/sql/pg.spi.foo.sql"
+click node_db_init "https://github.com/rabravo/ws2pgdb/blob/main/docker/init-db.sh"
+click node_db_cfg "https://github.com/rabravo/ws2pgdb/blob/main/docker/pg_config.yml"
+click node_manage "https://github.com/rabravo/ws2pgdb/blob/main/docker/manage.sh"
+click node_ci "https://github.com/rabravo/ws2pgdb/blob/main/.github/workflows/docker-publish.yml"
+click node_sample "https://github.com/rabravo/ws2pgdb/blob/main/data/Watts.rda"
+click node_workflow "https://github.com/rabravo/ws2pgdb/blob/main/docs/workflow.html"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_noaa,node_census toneBlue
+class node_ws_pkg,node_meta_load,node_data_load,node_span_ops,node_ingest_db,node_spatial_ops,node_coords,node_voronoi toneAmber
+class node_db_image,node_db_sql,node_spi_sql toneMint
+class node_db_init,node_db_cfg,node_manage,node_ci toneRose
+class node_qgis toneIndigo
+class node_sample,node_workflow toneTeal
+
+```
+
